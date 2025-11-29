@@ -1,0 +1,109 @@
+<?php
+
+/**
+ * @file
+ * Install, update and uninstall functions for the module.
+ */
+
+use Drupal\Core\Field\Entity\BaseFieldOverride;
+use Drupal\language\Entity\ContentLanguageSettings;
+
+// function helperbox_install() {}
+// function helperbox_update_8001() {
+//     process_translatable_content_types(['faq', 'blog']);
+// }
+
+/**
+ * Implement hook_install()
+ * https://api.drupal.org/api/drupal/core%21lib%21Drupal%21Core%21Extension%21module.api.php/function/hook_install/11.x
+ * 
+ * Implement hook_update_N
+ * https://api.drupal.org/api/drupal/core%21lib%21Drupal%21Core%21Extension%21module.api.php/function/hook_update_N/11.x
+ * 
+ */
+
+/**
+ * 
+ */
+function process_translatable_menu_link_content() {
+    // Enable translation for all custom menus (menu_link_content).
+    $menus = \Drupal\system\Entity\Menu::loadMultiple();
+    foreach ($menus as $menu_id => $menu) {
+        // Load or create settings for each menu bundle.
+        $settings = ContentLanguageSettings::loadByEntityTypeBundle('menu_link_content', $menu_id);
+        if (!$settings) {
+            $settings = ContentLanguageSettings::create([
+                'target_entity_type_id' => 'menu_link_content',
+                'target_bundle' => $menu_id,
+            ]);
+        }
+        // Enable content translation.
+        $settings->setThirdPartySetting('content_translation', 'enabled', TRUE);
+        $settings->save();
+    }
+}
+
+/**
+ * 
+ */
+function process_translatable_paragraph_type() {
+    // Enable translation for all Paragraph bundles.
+    $paragraph_bundles = \Drupal\paragraphs\Entity\ParagraphsType::loadMultiple();
+    foreach ($paragraph_bundles as $bundle_id => $paragraph_type) {
+        // Enable content language settings.
+        $settings = ContentLanguageSettings::loadByEntityTypeBundle('paragraph', $bundle_id);
+        if (!$settings) {
+            $settings = ContentLanguageSettings::create([
+                'target_entity_type_id' => 'paragraph',
+                'target_bundle' => $bundle_id,
+            ]);
+        }
+        $settings->setThirdPartySetting('content_translation', 'enabled', FALSE);
+        $settings->save();
+    }
+}
+
+
+/**
+ * Enable translation for specific content types and their title field.
+ */
+function process_translatable_content_types($translatable_content_types) {
+    foreach ($translatable_content_types as $type) {
+        try {
+            // Enable content translation for this content type.
+            $settings = ContentLanguageSettings::loadByEntityTypeBundle('node', $type);
+            if (!$settings) {
+                $settings = ContentLanguageSettings::create([
+                    'target_entity_type_id' => 'node',
+                    'target_bundle' => $type,
+                ]);
+            }
+            $settings->setThirdPartySetting('content_translation', 'enabled', TRUE);
+            $settings->save();
+
+            // List of base fields we want translatable.
+            $base_fields = [
+                'title',   // Node title
+                'status',  // Published/unpublished
+                'path',    // URL alias
+                // 'metatag', // Metatag field
+            ];
+
+            // Enable translation for each base field.
+            foreach ($base_fields as $field_name) {
+                $override = BaseFieldOverride::load("node.{$type}.{$field_name}");
+                if (!$override) {
+                    $override = BaseFieldOverride::create([
+                        'entity_type' => 'node',
+                        'bundle' => $type,
+                        'field_name' => $field_name,
+                    ]);
+                }
+                $override->setTranslatable(TRUE);
+                $override->save();
+            }
+        } catch (\Throwable $th) {
+            //throw $th;
+        }
+    }
+}

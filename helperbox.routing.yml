@@ -1,0 +1,8 @@
+helperbox.api_test:
+  path: '/api/testhelperbox'
+  defaults:
+    _controller: '\Drupal\helperbox\Controller\TestApiController::getData'
+    _format: 'json'
+  requirements:
+    _permission: 'access content'
+  methods: [GET]

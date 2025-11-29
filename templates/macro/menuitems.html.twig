@@ -1,0 +1,69 @@
+{#
+
+  Parameters:
+  - items: array of menu items
+  - attributes: HTML attributes for <ul>
+  - menu_level: current menu depth (starts at 0)
+  - main_class: CSS class for the top-level menu
+
+  We call a macro which calls itself to render the full tree.
+  @see https://twig.symfony.com/doc/3.x/tags/macro.html
+#}
+
+{% macro menu_links(items, attributes, menu_level, main_class) %}
+	{% import _self as header_menus %}
+	{% if items %}
+		{% set ul_classes = [
+				main_class,
+				'menu--level-' ~ (menu_level + 1)
+			] 
+		%}
+		<ul {{ attributes.addClass(ul_classes) }}>
+			{% set attributes = attributes.removeClass(ul_classes) %}
+			{% for item in items %}
+				{# Set classes for the <li>, including active state and children #}
+				{% set item_classes = [
+					'menu-item',
+					'menu-item--' ~ loop.index,
+					item.below ? 'menu-item--has-children',
+					item.is_active ? 'active',
+					href ? '':'menu-item-no-link',
+				] %}
+
+				{# Common content for both <a> and <span> in li #}
+				{% set menu_item_content %}
+					{% if item.field_icon %}
+						{% for icon in item.field_icon %}
+							<img src="{{ icon.file_path }}" alt="{{icon.file_name}}" class="">
+						{% endfor %}
+					{% endif %}
+					<div class="menu__title">
+						{{item.title}}
+					</div>
+				{% endset %}
+
+				{# Determine href if the item has a URL #}
+				{% set href = item.url ? item.url.toString : '' %}
+
+				<li
+					{{item.attributes.addClass(item_classes)}}>
+					{# Render link if href exists, otherwise use <span> #}
+					{% if href %}
+						<a href="{{ href }}" class="menu-item-link">
+							{{ menu_item_content|raw }}
+						</a>
+					{% else %}
+						<span class="menu-item-link menu-item-no-link">
+							{{ menu_item_content|raw }}
+						</span>
+					{% endif %}
+
+					{# Recursive call for children #}
+					{% if item.below %}
+						{{ header_menus.menu_links(item.below, attributes, menu_level + 1,'sub-menu') }}
+					{% endif %}
+				</li>
+			{% endfor %}
+		</ul>
+	{% endif %}
+{% endmacro %}

@@ -1,0 +1,74 @@
+{#
+/**
+ * @file
+ * implementation for the helperbox-block.
+#}
+
+{% set block_classes = [
+    'helperbox-content-type-block',
+    block_layout
+    ]
+%}
+<div {{attributes.addClass(block_classes)}}>
+
+	<div class="content-wrapper">
+		<div class="title-wrapper">
+			{% if section_sub_title %}
+				<div class="sub-title">
+					<h3>
+						{{ section_sub_title }}
+					</h3>
+				</div>
+			{% endif %}
+
+			{% if section_title %}
+				<div class="title">
+					<h2>
+						{{ section_title }}
+					</h2>
+				</div>
+			{% endif %}
+		</div>
+
+		<div class="node-icon-wrapper">
+			{% for node in content %}
+				<div class="node-item-icon">
+					{% if node.field_icon %}
+						<img class="icon" src="{{node.field_icon.file_url}}" loading="lazy" alt="{{node.field_icon.file_name}}">
+					{% endif %}
+				</div>
+			{% endfor %}
+		</div>
+
+		<div class="node-content-wrapper">
+			{% for node in content %}
+				<div class="single-content-wrapper">
+					{% if show_edit_btn %}
+						{% if node.can_update %}
+							<div class="nodes-field-edit-block-content">
+								<a href="{{node.update_url}}">Edit</a>
+							</div>
+						{% endif %}
+					{% endif %}
+					<a href="{{node.url}}" class="node-item-content">
+						<div class="node-title">{{node.title}}</div>
+						{% if node.field_key_offerings %}
+							<ul class="key_offering-wrapper">
+								{% for field_key_offerings in node.field_key_offerings %}
+									<li class="key_offering-title">{{field_key_offerings.field_title}}</li>
+								{% endfor %}
+							</ul>
+						{% endif %}
+					</a>
+
+					{% if node_view_label %}
+						<div class="node-view">
+							<a href="{{node.url}}">{{node_view_label}}</a>
+						</div>
+					{% endif %}
+				</div>
+			{% endfor %}
+		</div>
+	</div>
+
+</div>

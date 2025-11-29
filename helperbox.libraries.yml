@@ -1,0 +1,45 @@
+helperbox_styles:
+  version: 1.x
+  css:
+    theme:
+      css/helperbox.css: {}
+  js:
+    js/helperbox.js: {}
+  dependencies:
+    - core/jquery
+
+helperbox_admin_styles:
+  version: 1.x
+  css:
+    theme:
+      css/helperbox_admin.css: {}
+  js:
+    js/helperbox_admin.js: {}
+  dependencies:
+    - core/jquery
+    - core/drupal
+    - core/drupalSettings
+    - core/drupal.message
+
+node_form_conditional_fields:
+  css:
+    theme:
+      css/node_form_conditional_fields.css: {}
+  js:
+    js/node_form_conditional_fields.js: {}
+  dependencies:
+    - core/drupal
+    - core/drupalSettings
+    - core/jquery
+
+date_month_widget:
+  version: 1.x
+  css:
+    theme:
+      css/date_month_widget.css: {}
+  js:
+    js/date_month_widget.js: {}
+  dependencies:
+    - core/jquery
+    - core/drupal
+    - select2/select2

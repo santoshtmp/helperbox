@@ -1,0 +1,22 @@
+{#
+/**
+ * @file
+ * implementation for the helperbox menu.
+ *
+ * Available variables:
+ * - menu_layout :: default, mobile
+ * - menu_title
+ * - menu_items
+ * - social_link_title
+ * - social_links
+ * - background_image
+ *
+ * @ingroup themeable
+ */
+#}
+
+{% import '@helperbox/macro/menuitems.html.twig' as component_menus %}
+
+{% if menu_items %}
+	{{ component_menus.menu_links(menu_items, attributes, 0,'menu-'~ menu_type) }}
+{% endif %}

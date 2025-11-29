@@ -1,0 +1,5 @@
+services:
+  helperbox.loader_event_subscriber:
+    class: Drupal\helperbox\EventSubscriber\LoaderEventSubscriber
+    tags:
+      - { name: event_subscriber }

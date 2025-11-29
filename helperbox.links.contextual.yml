@@ -1,0 +1,6 @@
+helperbox.block_edit_links:
+  group: helperbox_block_menu
+  title: "Edit Menu"
+  route_name: entity.menu.edit_form
+  route_parameters:
+    menu: main

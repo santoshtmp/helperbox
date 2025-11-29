@@ -1,0 +1,31 @@
+{#
+/**
+ * @file
+ * implementation for the helperbox menu.
+ *
+ * Available variables:
+ * - content
+ * - view_id
+ * - display_id
+ * - adminlinks
+ * - attributes
+ *
+ */
+#}
+
+<div {{attributes}}>
+	{% if adminlinks %}
+		<div class="contextual edit-adminlinks">
+			<button class="trigger focusable" type="button"> {{ 'configuration options'|t }}</button>
+			<ul class=" contextual-links">
+				{% for item in adminlinks %}
+					<li>
+						<a href="{{ item.link}}">{{ item.title}}</a>
+					</li>
+				{% endfor %}
+			</ul>
+		</div>
+	{% endif %}
+
+	{{ content }}
+</div>

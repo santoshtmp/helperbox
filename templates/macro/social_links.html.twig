@@ -1,0 +1,19 @@
+{#
+  We call a macro which calls itself to render the full tree.
+  @see https://twig.symfony.com/doc/3.x/tags/macro.html
+#}
+{% macro macro_social_links(social_links, directory) %}
+  {% if social_links %}
+    <ul class="social-link-wrapper">
+      {% for social_link in social_links %}
+        <li class="{{social_link.social_type}}">
+          <a href="{{ social_link.url }}" social-link-type="{{ social_link.social_type }}">
+            {# {% set social_icon = directory ~ '/assets/images/icons/social-icons/ic_'~ social_link.social_type ~'-outline.svg' %} #}
+            {# <img class="social-icon" src="/{{social_icon}}" alt="icon" > #}
+            {{ social_link.social_type }}
+          </a>
+        </li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+{% endmacro %}

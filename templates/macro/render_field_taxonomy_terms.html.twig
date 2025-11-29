@@ -1,0 +1,32 @@
+{#
+  We call a macro which calls itself to render the full tree.
+  @see https://twig.symfony.com/doc/3.x/tags/macro.html
+#}
+{% macro render_field_taxonomy_terms(field, wrapper_class = '', link_terms = false) %}
+
+	{% if field is not empty %}
+		{% set items = [] %}
+		{% for item in field %}
+			{% set term = item.entity %}
+			{% set title = term.name.value ?? '' %}
+
+			{% if link_terms %}
+				{% set link %}
+				<a href="{{ path('entity.taxonomy_term.canonical', {'taxonomy_term': term.id}) }}" class="term-link">
+					{{ title }}
+				</a>
+				{% endset %}
+				{% set items = items|merge([link|trim]) %}
+			{% else %}
+				{% set items = items|merge([title]) %}
+			{% endif %}
+
+		{% endfor %}
+
+		<div class="content-info taxonomy-terms {{ wrapper_class }}">
+			{{ items|join(', ')|raw }}
+		</div>
+	{% endif %}
+
+
+{% endmacro %}

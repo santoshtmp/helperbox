@@ -1,0 +1,62 @@
+{#
+/**
+ * @file
+ * implementation for the helperbox-repeated-content-block. 
+#}
+
+
+{% set block_classes = [
+    'helperbox-repeated-content-block',
+    block_layout
+    ]
+%}
+
+<div {{attributes.addClass(block_classes)}}>
+
+	<div class="title-wrapper">
+		{% if section_sub_title %}
+			<div class="sub-title">
+				<h3>
+					{{ section_sub_title }}
+				</h3>
+			</div>
+		{% endif %}
+		{% if section_title %}
+			<div class="title">
+				<h2>
+					{{ section_title }}
+				</h2>
+			</div>
+		{% endif %}
+	</div>
+	<div class="content-list-wrapper">
+		{% for key,item in content_list %}
+			{% set content = item.content %}
+			<div class="content-wrapper" content="{{ key }}">
+				<div class="feature_image">
+					{% for image in content.feature_image %}
+						<img src="{{ image.file_url }}" alt="{{ image.file_name }}" class=''>
+					{% endfor %}
+				</div>
+
+				<div class="title-wrapper">
+					{% if content.title %}
+						<div class="title">
+							{{ content.title }}
+						</div>
+					{% endif %}
+					{% if content.sub_title %}
+						<div class="sub-title">
+							{{ content.sub_title }}
+						</div>
+					{% endif %}
+				</div>
+				<div class="description">
+					{{content.description.value | raw}}
+				</div>
+
+			</div>
+		{% endfor %}
+	</div>
+
+</div>

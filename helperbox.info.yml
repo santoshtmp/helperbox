@@ -1,0 +1,16 @@
+name: "HelperBox"
+type: module
+description: "Provides a collection of helper utilities including custom blocks, views helpers, field formatters, theme suggestions, preprocess hooks and API tools."
+core_version_requirement: ^11
+package: Custom
+version: 11.2.5
+dependencies:
+  - drupal:system
+  - drupal:block
+  - drupal:field
+  - drupal:datetime
+  - select2:select2
+  - drupal:media_library_form_element
+  - drupal:menu_item_extras
+  - drupal:config_pages
+  - drupal:conditional_fields

@@ -1,0 +1,28 @@
+{#
+  We call a macro which calls itself to render the full tree.
+  @see https://twig.symfony.com/doc/3.x/tags/macro.html
+#}
+{% macro render_field_content_nodes(field, wrapper_class = '', link = false) %}
+
+	{% if field is not empty %}
+		<div class="content-info entity-nodes {{ wrapper_class }}">
+
+			{% for item in field %}
+				{% set node = item.entity %}
+				{% set title = node.label() ?? '' %}
+				{% set url = path('entity.node.canonical', {'node': node.id}) %}
+				{% if link_nodes and url %}
+					<a href="{{ url }}" class="node-link">
+						{{ title }}
+					</a>{% if not loop.last %},{% endif %}
+				{% else %}
+					{{ title }}{% if not loop.last %},{% endif %}
+				{% endif %}
+
+			{% endfor %}
+
+		</div>
+	{% endif %}
+
+
+{% endmacro %}

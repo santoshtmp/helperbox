@@ -1,0 +1,93 @@
+{#
+/**
+ * @file
+ * implementation for the helperbox-banner.
+ * available block_layout =
+ * "home_hero_banner" or
+ * "home_sc_studio" or
+ * other as defined in block configuration setting
+ *
+ */
+#}
+
+
+{% set block_classes = [
+    'helperbox-banner',
+    block_layout,
+    ]
+%}
+
+<div {{attributes.addClass(block_classes)}}>
+
+	<div class="main-layout-content">
+		<div class="content-wrapper">
+			<div class="title-wrapper">
+				{% if section_sub_title %}
+					<div class="sub-title">
+						<h3>
+							{{ section_sub_title }}
+						</h3>
+					</div>
+				{% endif %}
+				{% if section_title %}
+					<div class="title">
+						<h2>
+							{{ section_title }}
+						</h2>
+					</div>
+				{% endif %}
+			</div>
+			{% if section_body %}
+				<div class="description">
+					{{ section_body | raw}}
+				</div>
+			{% endif %}
+			{% if cta_links %}
+				<div class="cta-wrapper">
+					{% for cta in cta_links %}
+						<a href="{{ cta.url }}" class="cta">
+							<span>
+								{{ cta.label }}
+							</span>
+						</a>
+					{% endfor %}
+				</div>
+			{% endif %}
+			{% if section_body_title_2 %}
+				<div class="section_body_title_2">
+					{{ section_body_title_2 }}
+				</div>
+			{% endif %}
+			{% if section_highlight %}
+				<div class="highlight">
+					{{section_highlight | raw}}
+				</div>
+			{% endif %}
+			{% if section_body_desc_2 %}
+				<div class="section_body_desc_2">
+					{{ section_body_desc_2 | raw}}
+				</div>
+			{% endif %}
+		</div>
+		<div class="left-content">
+			<div class="image-overlay"></div>
+			{% for image in feature_image %}
+				<img class="feature-image" src="{{ image.file_url }}" alt="{{ image.file_name }}">
+			{% endfor %}
+
+			{% for image in background_image %}
+				<img class="background-image" src="{{ image.file_url }}" alt="{{ image.file_name }}">
+			{% endfor %}
+		</div>
+	</div>
+	{% for video in feature_video %}
+		<div class="video-container">
+			{% set thumbnail_url = video.thumbnail[0].file_url  %}
+			<video muted preload="metadata" loop poster="{{ thumbnail_url }}">
+				<source src="{{video.file_url}}" type="{{video.file_mime}}">
+				Your browser does not support the video tag.
+			</video>
+			<div class="link-circle"></div>
+		</div>
+	{% endfor %}
+</div>

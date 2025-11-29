@@ -1,0 +1,441 @@
+<?php
+
+/**
+ * 
+ *  Helperbox module
+ * 
+ */
+
+use Drupal\helperbox\Helper\UtilHelper;
+use Drupal\helperbox\Helper\PreprocessNode;
+use Drupal\views\ViewExecutable;
+use Drupal\views\Plugin\views\query\QueryPluginBase;
+use Drupal\helperbox\Helper\FormField;
+
+/**
+ * Implements hook_theme().
+ */
+function helperbox_theme() {
+    $theme = [];
+
+    $theme['helperbox_menu'] = [
+        'variables' => [
+            'menu_layout' => '',
+            'menu_type' => '',
+            'menu_title' => '',
+            'menu_items' => [],
+            'social_link_title' => '',
+            'social_links' => '',
+            'background_image' => ''
+        ],
+        'template' => 'helperbox-menu',
+    ];
+    $theme['helperbox_banner'] = [
+        'variables' => [
+            'section_title' => '',
+            'section_sub_title' => '',
+            'section_body' => '',
+            'feature_video' => [],
+            'feature_image' => [],
+            'cta_links' => [],
+            'video_links' => [],
+            'block_layout' => '',
+            'section_highlight' => '',
+            'section_highlight_enable' => '',
+            'background_image' => '',
+            'secondary_body_enable' => '',
+            'section_body_title_2' => '',
+            'section_body_desc_2' => '',
+            'lottie_file' => '',
+        ],
+        'template' => 'helperbox-banner',
+    ];
+    $theme['helperbox_content'] = [
+        'variables' => [
+            'section_title' => '',
+            'section_sub_title' => '',
+            'block_layout' => '',
+            'content' => [],
+            'show_edit_btn' => 0,
+            'node_view_label' => '',
+            'view_all_cta' => '',
+            'other_meta_info' => '',
+        ],
+        'template' => 'helperbox-content',
+    ];
+    $theme['helperbox_contact'] = [
+        'variables' => [
+            'block_layout' => '',
+            'section_title' => '',
+            'section_body' => '',
+            'email' => '',
+            'phone_number' => '',
+            'address' => '',
+            'social_links' => [],
+            'feature_media' => [],
+            'media_type' => '',
+            'selected_webform' => '',
+            'find_us_title' => '',
+            'contact_us_title' => '',
+        ],
+        'template' => 'helperbox-contact',
+    ];
+    $theme['helperbox_repeatedcontent'] = [
+        'variables' => [
+            'block_layout' => '',
+            'section_title' => '',
+            'section_sub_title' => '',
+            'content_list' => [],
+            'other_meta_info' => '',
+        ],
+        'template' => 'helperbox-repeatedcontent',
+    ];
+    $theme['helperbox_renderblock'] = [
+        'variables' => [
+            'content' => '',
+            'view_id' => '',
+            'display_id' => '',
+            'adminlinks' => [],
+            'attributes' => [],
+        ],
+        'template' => 'helperbox-renderblock',
+    ];
+
+    return $theme;
+}
+
+/**
+ * Implements template suggestion for helperbox_menu
+ */
+function helperbox_theme_suggestions_helperbox_menu(array $variables) {
+    $suggestions = [];
+    $suggestions[] = 'helperbox_menu__layout_' . $variables['menu_layout'];
+    $suggestions[] = 'helperbox_menu__menu_' . $variables['menu_type'];
+    $suggestions[] = 'helperbox_menu__layout_' . $variables['menu_layout'] . '__menu_' . $variables['menu_type'];
+
+    return $suggestions;
+}
+
+/**
+ * Implements template suggestion for helperbox_banner
+ */
+function helperbox_theme_suggestions_helperbox_banner(array $variables) {
+
+    $suggestions = [];
+    if (isset($variables['block_layout'])) {
+        $suggestions[] = 'helperbox_banner__layout_' . $variables['block_layout'];
+    }
+    return $suggestions;
+}
+
+/**
+ * Implements template suggestion for helperbox_contact
+ */
+function helperbox_theme_suggestions_helperbox_contact(array $variables) {
+
+    $suggestions = [];
+    if (isset($variables['block_layout'])) {
+        $suggestions[] = 'helperbox_contact__layout_' . $variables['block_layout'];
+    }
+    return $suggestions;
+}
+
+/**
+ * Implements template suggestion for helperbox_repeatedcontent
+ */
+function helperbox_theme_suggestions_helperbox_repeatedcontent(array $variables) {
+
+    $suggestions = [];
+    if (isset($variables['block_layout'])) {
+        $suggestions[] = 'helperbox_repeatedcontent__layout_' . $variables['block_layout'];
+    }
+
+    return $suggestions;
+}
+
+/**
+ * Implements template suggestion for helperbox_content
+ */
+function helperbox_theme_suggestions_helperbox_content(array $variables) {
+
+    $suggestions = [];
+    if (isset($variables['block_layout'])) {
+        $suggestions[] = 'helperbox_content__layout_' . $variables['block_layout'];
+    }
+
+    return $suggestions;
+}
+
+// /**
+//  * Implements hook_theme_suggestions_page_alter().
+//  */
+// function helperbox_theme_suggestions_page_alter(&$suggestions, $variables, $hook) {
+//     if (\Drupal::routeMatch()->getRouteName() == 'entity.node.canonical') {
+//         $node = \Drupal::routeMatch()->getParameter('node');
+//         $content_type = $node->bundle();
+//         $suggestions[] = 'page__type__' . $content_type;
+//     }
+// }
+
+// Implements hook_theme_suggestions_HOOK_alter() for form templates.
+function helperbox_theme_suggestions_form_alter(array &$suggestions, array $variables) {
+    $element = $variables['element'];
+    // $form_id = $element['#form_id'] ?? NULL;
+    $form_id = $element['#id'] ?? NULL;
+    // Add suggestion for search block form
+    if ($form_id) {
+        // This will allow a template named form--search-block-form.html.twig
+        $suggestions[] = 'form__' . str_replace('-', '_', $form_id);
+    }
+}
+
+// Implements hook_theme_suggestions_paragraph_alter().
+function helperbox_theme_suggestions_paragraph_alter(array &$suggestions, array $variables) {
+    $paragraph = $variables['elements']['#paragraph'];
+    // Get parent entity (node)
+    $parent = $paragraph->getParentEntity();
+    $current_path = \Drupal::service('path.current')->getPath();
+    // // $alias = \Drupal::service('path_alias.manager')->getAliasByPath($current_path);
+    // $isFrontPage = \Drupal::service('path.matcher')->isFrontPage() ? 'frontpage' : '';
+    $current_path = str_replace('/', '', trim($current_path, '/'));
+
+    // Add suggestions
+    $suggestions[] = 'paragraph__' . $paragraph->bundle() . '__path_' . $current_path;
+    // check paragraph parent node
+    if ($parent || $parent->getEntityTypeId() == 'node') {
+        $node = $parent;
+        $node_id = $node->id();
+        $field_name = $paragraph->get('parent_field_name')->value ?? NULL;
+
+        // Add suggestions
+        $suggestions[] = 'paragraph__' . $paragraph->bundle() . '__' . $node->bundle();
+        $suggestions[] = 'paragraph__' . $paragraph->bundle() . '__' . $node->bundle() . '__' . $field_name;
+        $suggestions[] = 'paragraph__' . $paragraph->bundle() . '__node_' . $node_id;
+        $suggestions[] = 'paragraph__' . $paragraph->bundle() . '__node_' . $node_id . '__' . $field_name;
+        $suggestions[] = 'paragraph__' . $paragraph->bundle() . '__node_' . $node_id . '__path_' . $current_path;
+    }
+}
+
+// Implements hook_theme_suggestions_field_alter().
+function helperbox_theme_suggestions_field_alter(array &$suggestions, array $variables) {
+    $field_name = $variables['element']['#field_name'] ?? '';
+    if (!$field_name) {
+        return;
+    }
+    // Get the entity that owns the field (paragraph or node)
+    $entity = $variables['element']['#object'] ?? NULL;
+    if (!$entity) {
+        return;
+    }
+    // 
+    $base_field = 'field__' . $entity->getEntityTypeId() . '__' . str_replace('-', '_', $field_name) . '__' . $entity->bundle();
+    if ($entity->getEntityTypeId() == 'paragraph') {
+        $nid = $entity->get('parent_id')->value;
+        // $node = \Drupal\node\Entity\Node::load($nid);
+        $suggestions[] = $base_field . '__nid_' . $nid;
+    }
+    if ($entity->getEntityTypeId() == 'node') {
+        $suggestions[] = $base_field . '__nid_' . $entity->id();
+    }
+}
+
+// Implements hook_theme_suggestions_HOOK_alter().
+function helperbox_theme_suggestions_colorbox_view_mode_formatter_alter(array &$suggestions, array $variables) {
+
+    if (isset($variables['field_name'])) {
+        $suggestions[] = 'colorbox_view_mode_formatter__field_' . $variables['field_name'];
+    }
+
+    $node = \Drupal::routeMatch()->getParameter('node');
+    if ($node instanceof \Drupal\node\NodeInterface) {
+        $suggestions[] = 'colorbox_view_mode_formatter__node_' . $node->bundle();
+        $suggestions[] = 'colorbox_view_mode_formatter__node_' . $node->bundle() . '_' . $node->id();
+    }
+}
+
+/**
+ * Implements hook_views_data_alter().
+ */
+function helperbox_views_data_alter(array &$data) {
+    $data['views']['helperbox_count_node'] = [
+        'title' => t('Count node'),
+        'help'  => t('Count content type node'),
+        'field' => [
+            'id' => 'helperbox_count_node',
+        ],
+        'group' => t('HelperBox'),
+    ];
+    $data['views']['helperbox_renderblock'] = [
+        'title' => t('Render Block'),
+        'help'  => t('Display the block content'),
+        'field' => [
+            'id' => 'helperbox_renderblock',
+        ],
+        'group' => t('HelperBox'),
+    ];
+    $data['views']['helperbox_custom_text'] = [
+        'title' => t('Full HTML Custom Text'),
+        'help'  => t('Display full html content'),
+        'field' => [
+            'id' => 'helperbox_custom_text',
+        ],
+        'group' => t('HelperBox'),
+    ];
+}
+
+
+// /**
+//  * Implements hook_preprocess_HOOK() for page title templates.
+//  */
+// function helperbox_preprocess_page(&$variables): void {
+// }
+
+/**
+ * Implement hook_preprocess_node()
+ * preprocess node variables before they are passed to the node.html.twig template.
+ */
+function helperbox_preprocess_node(array &$variables) {
+    try {
+        if (isset($variables['node']) && $variables['node'] instanceof \Drupal\node\NodeInterface) {
+            $node = $variables['node'];
+            $node_type = $node->bundle();
+            $method_name = $node_type . '_preprocess_node';
+            if (method_exists('Drupal\helperbox\Helper\PreprocessNode', $method_name)) {
+                PreprocessNode::$method_name($variables);
+            }
+        }
+    } catch (\Throwable $th) {
+        UtilHelper::helperbox_error_log($th);
+    }
+}
+
+// /**
+//  * Implements hook_preprocess_HOOK() for block.
+//  */
+// function helperbox_preprocess_block(&$variables) {}
+
+/**
+ * Implements hook_preprocess_views_view_field().
+ */
+function helperbox_preprocess_views_view_field(&$variables) {
+    $field = $variables['field'];
+    $view = $variables['view'];
+    $row = $variables['row'];
+    // Build method name: viewID_displayID_fieldName_field
+    $method_name = sprintf(
+        '%s_%s_%s_field',
+        $view->id(),
+        $view->current_display,
+        $field->field
+    );
+
+    // // Only call if the static method exists in the helper class
+    // if (method_exists('Drupal\helperbox\Helper\PreprocessViewsViewField', $method_name)) {
+    //     PreprocessViewsViewField::$method_name($variables);
+    // }
+}
+
+/**
+ * Implements hook_page_attachments_alter().
+ */
+function helperbox_page_attachments_alter(array &$attachments) {
+    // Only run on admin routes
+    $admin_context = \Drupal::service('router.admin_context');
+    if (!$admin_context->isAdminRoute()) {
+        return;
+    }
+
+    // Attach the library
+    $attachments['#attached']['library'][] = 'helperbox/helperbox_admin_styles';
+
+    // Get current route and parameters
+    $route_match = \Drupal::routeMatch();
+    $route_name = $route_match->getRouteName();
+    $parameters = $route_match->getParameters();
+    $request = \Drupal::request();
+    $path = $request->getPathInfo();
+
+    // Remove language prefix if present
+    $language_prefix = '/' . \Drupal::languageManager()->getCurrentLanguage()->getId();
+    if (strpos($path, $language_prefix) === 0) {
+        $path = substr($path, strlen($language_prefix));
+    }
+
+    // Content type to check
+    $contentType = 'understanding_fimi';
+
+    // Check if maximum nodes for this content type is reached
+    if (FormField::maxNodeValidate($contentType)) {
+
+        // Pass info to JS (for hiding Add Node links)
+        $attachments['#attached']['drupalSettings']['maxNodeValidate'][$contentType] = true;
+
+        // Get human-readable content type label
+        $type_label = \Drupal\node\Entity\NodeType::load($contentType)->label();
+
+        // Show status message only on:
+        // 1. Node add page for this content type
+        // 2. Admin content page for this content type
+        if ($route_name === 'node.add' && $parameters->get('node_type')->id() === $contentType) {
+            \Drupal::messenger()->addStatus(
+                t(
+                    'You cannot create a new "@value" node — the maximum number has been reached.',
+                    ['@value' => $type_label]
+                )
+            );
+        }
+    }
+}
+
+/**
+ * Implements hook_views_query_alter().
+ *
+ * Filter Config Pages views to the current language.
+ */
+function helperbox_views_query_alter(ViewExecutable $view, QueryPluginBase $query) {
+    try {
+        // check if the view is for Config Pages.
+        if ($view->storage->get('base_table') !== 'config_pages') {
+            return;
+        }
+
+        // Skip if query is not SQL (unlikely for Config Pages).
+        if (!$query instanceof \Drupal\views\Plugin\views\query\Sql) {
+            return;
+        }
+
+        // Get the current language code.
+        $current_lang = \Drupal::languageManager()->getCurrentLanguage()->getId();
+        if (!$current_lang) {
+            return;
+        }
+
+        // Build safe LIKE patterns.
+        $like_json = '%"language":"' . $current_lang . '"%';
+        $like_php  = '%s:8:"language";s:2:"' . $current_lang . '"%';
+
+        $expression = "(context LIKE :lang_json OR context LIKE :lang_php)";
+
+        // Add to the default WHERE group (0).
+        $query->addWhereExpression(0, $expression, [
+            ':lang_json' => $like_json,
+            ':lang_php'  => $like_php,
+        ]);
+    } catch (\Throwable $th) {
+        //throw $th;
+    }
+}
+
+/**
+ * Implements hook_form_alter().
+ */
+function helperbox_form_alter(&$form, \Drupal\Core\Form\FormStateInterface $form_state, $form_id) {
+    // Call helper to apply more complex field rules.
+    FormField::applyFormFieldCondition($form, $form_state, $form_id);
+}
+
+// /**
+//  * Implements hook_webform_submission_insert().
+//  */
+// function helperbox_webform_submission_insert(\Drupal\webform\Entity\WebformSubmission $webform_submission) {
+// }
