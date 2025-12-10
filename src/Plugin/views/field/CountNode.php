@@ -41,6 +41,7 @@ class CountNode extends FieldPluginBase {
         // Get all configurable fields for a node bundle
         $nodeContentType = $form_state->getValue('node_content_type') ?? $this->options['node_content_type'] ?? '';
         $conditionCount = $form_state->getValue('condition_count') ?? $this->options['condition_count'] ?? 0;
+        $set_condition = $form_state->getValue('set_condition') ?? $this->options['set_condition'] ?? [];
 
         /** @var \Drupal\field\Entity\FieldConfig[] $fields */
         $fields = \Drupal::entityTypeManager()
@@ -50,7 +51,9 @@ class CountNode extends FieldPluginBase {
                 'bundle' => $nodeContentType,
             ]);
 
-        $field_options = [];
+        $field_options = [
+            'helperbox_other_fields' => $this->t('Other field'),
+        ];
         foreach ($fields as $field_name => $field) {
             $field_type = $field->getType();
             if (in_array($field_type, ['entity_reference'])) {
@@ -89,23 +92,48 @@ class CountNode extends FieldPluginBase {
             $form['set_condition'][$i]['node_field'] = [
                 '#type' => 'select',
                 '#title' => $this->t('Select condition field'),
+                '#default_value' => isset($set_condition[$i]['node_field']) ? $set_condition[$i]['node_field'] : '',
                 '#options' => $field_options,
                 '#prefix' => '<div id="field-wrapper-' . $i . '">',
                 '#suffix' => '</div>',
             ];
+            $form['set_condition'][$i]['helperbox_other_fields'] = [
+                '#type' => 'textfield',
+                '#title' => $this->t('Field machine name'),
+                '#default_value' => isset($set_condition[$i]['helperbox_other_fields']) ? $set_condition[$i]['helperbox_other_fields'] : '',
+                '#states' => [
+                    'visible' => [
+                        ':input[name="options[set_condition][' . $i . '][node_field]"]' => ['value' => 'helperbox_other_fields'],
+                    ],
+                ],
+            ];
+            $form['set_condition'][$i]['helperbox_operation'] = [
+                '#type' => 'textfield',
+                '#title' => $this->t('Condition operation'),
+                '#default_value' => isset($set_condition[$i]['helperbox_operation']) ? $set_condition[$i]['helperbox_operation'] : '',
+                '#description' => $this->t('Example: IN, NOT IN, etc.'),
+                '#states' => [
+                    'visible' => [
+                        ':input[name="options[set_condition][' . $i . '][node_field]"]' => ['value' => 'helperbox_other_fields'],
+                    ],
+                ],
+            ];
+
             $form['set_condition'][$i]['node_value'] = [
                 '#type' => 'select',
                 '#title' => $this->t('Field value'),
-                '#default_value' => '',
+                '#default_value' => isset($set_condition[$i]['node_value']) ? $set_condition[$i]['node_value'] : '',
                 '#options' => [
-                    'current_node_id' => $this->t('Current Content ID'),
-                    'custom_value' => $this->t('Custom Content ID value')
+                    'current_node_id' => $this->t('Current Content Node ID'),
+                    'current_row_node_id' => $this->t('Current row node ID'),
+                    'custom_value' => $this->t('Custom field value')
                 ],
             ];
             $form['set_condition'][$i]['custom_value'] = [
                 '#type' => 'textfield',
                 '#title' => $this->t('Custom field value'),
-                '#default_value' => '',
+                '#default_value' => isset($set_condition[$i]['custom_value']) ? $set_condition[$i]['custom_value'] : '',
+                '#description' => $this->t('Provide single custom field value to match.'),
                 '#states' => [
                     'visible' => [
                         ':input[name="options[set_condition][' . $i . '][node_value]"]' => ['value' => 'custom_value'],
@@ -138,20 +166,41 @@ class CountNode extends FieldPluginBase {
         }
         foreach ($setCondition as $key => $condition) {
             $node_field = $condition['node_field'];
-            $node_value = $condition['node_value'];
+            
+            // Check for other field
+            $node_value_type = $condition['node_value'];
             $target_id = '';
-            if ($node_value == 'current_node_id') {
+            if ($node_value_type == 'current_node_id') {
                 $node = \Drupal::routeMatch()->getParameter('node');
-                $target_id = $node ? $node->id() : NULL;
+                if ($node instanceof \Drupal\node\NodeInterface) {
+                    $target_id = $node->id();
+                }
+                // $target_id = $node ? $node->id() : NULL;
+            } elseif ($node_value_type === 'current_row_node_id') {
+                if (isset($values->_entity) && $values->_entity instanceof \Drupal\node\NodeInterface) {
+                    $target_id = $values->_entity->id();
+                } elseif (isset($values->nid)) {
+                    $target_id = $values->nid;
+                }
             }
-            if ($node_value == 'custom_value') {
-                $target_id = (int)$condition['custom_value'];
+            if ($node_value_type == 'custom_value') {
+                $target_id = $condition['custom_value'];
             }
-            if ($target_id) {
-                $nodequery =  $nodequery->condition($node_field . '.target_id', $target_id);
+
+            // Add condition
+            if ($target_id && $node_field) {
+                if ($node_field == 'helperbox_other_fields') {
+                    $node_field = $condition['helperbox_other_fields'] ?? '';
+                    $operation = $condition['helperbox_operation'] ?? '';
+
+                    if ($node_field && $operation) {
+                        $nodequery =  $nodequery->condition($node_field, [$target_id], $operation);
+                    }
+                } else {
+                    $nodequery =  $nodequery->condition($node_field . '.target_id', $target_id);
+                }
             }
         }
         return $nodequery->count()->execute();
-
     }
 }

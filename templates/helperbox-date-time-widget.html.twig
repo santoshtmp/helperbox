@@ -1,0 +1,31 @@
+{#
+/**
+ * @file
+ * Theme override of a datetime form element.
+ *
+ * Available variables:
+ * - attributes: HTML attributes for the datetime form element.
+ * - content: The datelist form element to be output.
+ *
+ * @see \Drupal\Core\Datetime\DatePreprocess::preprocessDatetimeForm()
+ */
+#}
+<div {{ attributes.addClass('form-items-inline helperbox-date-time-wrapper') }}>
+
+  <div class="helperbox-date-part form-items-inline">
+    {# Print date parts if they exist #}
+    {% if element.year is defined %}{{ element.year }}{% endif %}
+    {% if element.month is defined %}{{ element.month }}{% endif %}
+    {% if element.day is defined %}{{ element.day }}{% endif %}
+  </div>
+
+  <div class="helperbox-time-part form-items-inline">
+    {# Print time parts if they exist #}
+    {% if element.hour is defined %}{{ element.hour }}{% endif %}
+    {% if element.minute is defined %}{{ element.minute }}{% endif %}
+    {% if element.ampm is defined %}{{ element.ampm }}{% endif %}
+  </div>
+
+</div>
+
+

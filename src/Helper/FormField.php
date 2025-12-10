@@ -26,13 +26,12 @@ class FormField {
     public static function applyFormFieldCondition(&$form, $form_state, $form_id) {
         try {
 
-            // 
-            self::checkFieldsByFormId($form, $form_state, $form_id);
-
-            // Only node forms.
-            if (!str_starts_with($form_id, 'node_') || !str_ends_with($form_id, '_form')) {
+            if (!is_array($form)) {
                 return;
             }
+
+            // Run generic field checks (works on any form).
+            self::checkFieldsByFormId($form, $form_state, $form_id);
 
             // Optional: admin only.
             $admin_context = \Drupal::service('router.admin_context');
@@ -40,11 +39,33 @@ class FormField {
                 return;
             }
 
-            if (!is_array($form)) {
+            // Apply node/block specific checks.
+            self::applyNodeFormFieldCondition($form, $form_state, $form_id);
+            self::applyBlockFormFieldCondition($form, $form_state, $form_id);
+        } catch (\Throwable $th) {
+            UtilHelper::helperbox_error_log($th);
+        }
+    }
+
+    /**
+     * Applies alterations specific to node add/edit forms.
+     *
+     * @param array &$form
+     *   The form structure.
+     * @param \Drupal\Core\Form\FormStateInterface $form_state
+     *   The current state of the form.
+     * @param string $form_id
+     *   The form ID (e.g., node_article_form).
+     */
+    public static function applyNodeFormFieldCondition(&$form, $form_state, $form_id) {
+        try {
+            // Only node add/edit forms.
+            if (!str_starts_with($form_id, 'node_') || !str_ends_with($form_id, '_form')) {
                 return;
             }
+
             // Apply validation
-            $form['#validate'][] = ['\\Drupal\\helperbox\\Helper\\FormField', 'validate'];
+            $form['#validate'][] = ['\\Drupal\\helperbox\\Helper\\FormField', 'validateNodeForm'];
 
             // Get current node safely
             $node = self::getCurrentNodeFromFormState($form_state);
@@ -70,7 +91,7 @@ class FormField {
                 ];
             }
 
-            // Attach library (optional).
+            // Attach your JS/CSS library (optional).
             $form['#attached']['library'][] = 'helperbox/node_form_conditional_fields';
 
             // Add hidden NID.
@@ -89,7 +110,7 @@ class FormField {
             self::checkAllFields($form, $form_state, $node);
             self::checkNodeFields($form, $form_state, $node);
 
-            // 
+            // // Optional: pass to JS (if you need it client-side).
             // $form['#attached']['drupalSettings']['nid'] = $nid ?? 0;
             // $form['#attached']['drupalSettings']['bundle'] = $bundle;
 
@@ -102,6 +123,68 @@ class FormField {
             //     \Drupal::messenger()->addStatus('message');
             // }
         } catch (\Throwable $th) {
+            UtilHelper::helperbox_error_log($th);
+        }
+    }
+
+    /**
+     * Applies alterations specific to custom block (block_content) forms.
+     *
+     * @param array &$form
+     *   The form structure.
+     * @param \Drupal\Core\Form\FormStateInterface $form_state
+     *   The current state of the form.
+     * @param string $form_id
+     *   The form ID.
+     */
+    public static function applyBlockFormFieldCondition(&$form, $form_state, $form_id) {
+        try {
+            if (!str_starts_with($form_id, 'block_content_') || !str_ends_with($form_id, '_form')) {
+                return;
+            }
+
+            $entity = '';
+            $form_object = $form_state->getFormObject();
+            if ($form_object instanceof \Drupal\Core\Entity\EntityFormInterface) {
+                $entity = $form_object->getEntity();
+            }
+            if (!$entity instanceof \Drupal\block_content\BlockContentInterface) {
+                return;
+            }
+
+            $entity_id    = $entity->id();
+            $entity_bundle = $entity->bundle();
+            // Add form classes.
+            if ($entity_id) {
+                $form['#attributes']['class'][] = 'block-' . $entity_id . '-form';
+            }
+            if ($entity_bundle) {
+                $form['#attributes']['class'][] = 'block-type-' . $entity_bundle;
+                $form['blocktype'] = [
+                    '#type' => 'hidden',
+                    '#value' => $entity_bundle,
+                    '#weight' => -100,
+                    '#attributes' => [
+                        'id' => 'edit-helperbox-blocktype-hidden',
+                        'class' => ['helperbox-blocktype-tracker'],
+                    ],
+                ];
+            }
+
+            // Add hidden blockid.
+            if (!isset($form['id'])) {
+                $form['id'] = [
+                    '#type' => 'hidden',
+                    '#value' => $entity_id,
+                    '#weight' => -100,
+                    '#attributes' => [
+                        'id' => 'edit-helperbox-blockid-hidden',
+                        'class' => ['helperbox-blockid-tracker'],
+                    ],
+                ];
+            }
+        } catch (\Throwable $th) {
+            //throw $th;
             UtilHelper::helperbox_error_log($th);
         }
     }
@@ -385,7 +468,7 @@ class FormField {
      *
      * @return void
      */
-    public static function validate(array &$form,  \Drupal\Core\Form\FormStateInterface $form_state) {
+    public static function validateNodeForm(array &$form,  \Drupal\Core\Form\FormStateInterface $form_state) {
 
         // Get current node safely
         $node = self::getCurrentNodeFromFormState($form_state);

@@ -130,8 +130,10 @@ class MediaHelper {
                                 $media_info['file_url'] = $file_url;
                                 $media_info['file_path'] = $file_path;
                                 $media_info['file_name'] = $media_entity->getFilename();
-                                $media_info['file_size'] = ($media_entity->getSize());
+                                $media_info['file_size'] = $media_entity->getSize();
+                                $media_info['file_sizeunit'] = UtilHelper::bytesToSize($media_entity->getSize());
                                 $media_info['file_mime'] = $media_entity->getMimeType();
+                                $media_info['file_extension'] = pathinfo($media_entity->getFilename(), PATHINFO_EXTENSION);
                                 $media_info['created_time'] = \Drupal::service('date.formatter')->format($media_entity->getCreatedTime(), 'custom', 'Y-m-d H:i:s');
                                 $media_info['thumbnail'] = $thumbnail_url;
                                 $media_info['image_style'] = $image_style;

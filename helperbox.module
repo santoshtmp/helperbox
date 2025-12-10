@@ -189,6 +189,52 @@ function helperbox_theme_suggestions_form_alter(array &$suggestions, array $vari
     }
 }
 
+/**
+ * Implements hook_theme_suggestions_views_view_field_alter().
+ */
+function helperbox_theme_suggestions_views_view_field_alter(array &$suggestions, array $variables) {
+
+    $view = $variables['view'];
+    $field = $variables['field'];
+    $row = $variables['row'];
+    // 
+    $view_id = $view->id();
+    $display_id = $view->current_display;
+    $field_name = $field->field;
+    $entity = $row->_entity ?? NULL;
+
+    if ($entity instanceof \Drupal\Core\Entity\ContentEntityInterface) {
+        if (!$entity->hasField($field_name)) {
+            return;
+        }
+        /** @var \Drupal\Core\Field\EntityReferenceFieldItemListInterface $field */
+        $entity_field = $entity->get($field_name);
+        if ($entity_field instanceof \Drupal\Core\Field\EntityReferenceFieldItemListInterface) {
+
+            $field_def = $entity_field->getFieldDefinition();
+            $field_type = $field_def->getType();
+            $target_type = $field_def->getSetting('target_type') ?? '';
+            if ($target_type == 'paragraph' && $field_type == 'entity_reference_revisions') {
+                $counter = 1;
+                foreach ($entity_field->referencedEntities() as $paragraph) {
+                    $field_name_id = $field->options['id'];
+                    // Attach view context to the paragraph entity.
+                    $paragraph->_helperbox_view_context = [
+                        'counter' => $counter++,
+                        'view_id' => $view_id,
+                        'display_id' => $display_id,
+                        'field_name' => $field_name,
+                        'field_name_id' => $field_name_id,
+                        'entity_type' => $entity->getEntityTypeId(),
+                        'entity_id' => $entity->id(),
+                        'entity_bundle' => $entity->bundle(),
+                    ];
+                }
+            }
+        }
+    }
+}
+
 // Implements hook_theme_suggestions_paragraph_alter().
 function helperbox_theme_suggestions_paragraph_alter(array &$suggestions, array $variables) {
     $paragraph = $variables['elements']['#paragraph'];
@@ -213,6 +259,17 @@ function helperbox_theme_suggestions_paragraph_alter(array &$suggestions, array 
         $suggestions[] = 'paragraph__' . $paragraph->bundle() . '__node_' . $node_id;
         $suggestions[] = 'paragraph__' . $paragraph->bundle() . '__node_' . $node_id . '__' . $field_name;
         $suggestions[] = 'paragraph__' . $paragraph->bundle() . '__node_' . $node_id . '__path_' . $current_path;
+    }
+
+    if (isset($paragraph->_helperbox_view_context)) {
+        $view_context = $paragraph->_helperbox_view_context;
+        if (isset($view_context['view_id']) && isset($view_context['display_id'])) {
+            $suggestions[] = 'paragraph__' . $paragraph->bundle() . '__view_' . $view_context['view_id'] . '_' . $view_context['display_id'];
+            $suggestions[] = 'paragraph__' . $paragraph->bundle() . '__view_' . $view_context['view_id'] . '_' . $view_context['display_id'] . '__fieldid_' . $view_context['field_name_id'];
+            // if (isset($node_id) && $node_id) {
+            //     $suggestions[] = 'paragraph__' . $paragraph->bundle() . '__view_' . $view_context['view_id'] . '_' . $view_context['display_id'] . '__node_' . $node_id;
+            // }
+        }
     }
 }
 
@@ -321,18 +378,41 @@ function helperbox_preprocess_views_view_field(&$variables) {
     $field = $variables['field'];
     $view = $variables['view'];
     $row = $variables['row'];
-    // Build method name: viewID_displayID_fieldName_field
-    $method_name = sprintf(
-        '%s_%s_%s_field',
-        $view->id(),
-        $view->current_display,
-        $field->field
-    );
+    $view_id = $view->id();
+    $display_id = $view->current_display;
 
+    // // Build method name: viewID_displayID_fieldName_field
+    // $method_name = sprintf(
+    //     '%s_%s_%s_field',
+    //     $view->id(),
+    //     $view->current_display,
+    //     $field->field
+    // );
     // // Only call if the static method exists in the helper class
     // if (method_exists('Drupal\helperbox\Helper\PreprocessViewsViewField', $method_name)) {
     //     PreprocessViewsViewField::$method_name($variables);
     // }
+}
+
+/**
+ * Implements hook_preprocess_paragraph().
+ */
+function helperbox_preprocess_paragraph(array &$variables) {
+    $paragraph = $variables['paragraph'];
+    if (isset($paragraph->_helperbox_view_context)) {
+        // Make the view context available in Twig
+        $variables['helperbox_view_context'] = $paragraph->_helperbox_view_context;
+    }
+    if ($paragraph->bundle() == 'content_item' && $paragraph->hasField('field_file_upload')) {
+        $field_file = $paragraph->get('field_file_upload');
+        if (!$field_file->isEmpty()) {
+            $item_id = $field_file->entity->id();
+            if ($item_id) {
+                $media = \Drupal\helperbox\Helper\MediaHelper::get_media_library_info($item_id);
+                $variables['helperbox_paragraph']['field_file_upload'] = $media[0];
+            }
+        }
+    }
 }
 
 /**

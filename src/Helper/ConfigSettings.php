@@ -153,6 +153,16 @@ class ConfigSettings {
             //     ]
             // ]
 
+        ],
+        'page' => [
+            '15' => [
+                'referenceField' => [
+                    'field_content_section' => [
+                        'field_highlight_text' => true,
+                    ]
+                ]
+            ]
+
         ]
         // Add more content types here…
     ];

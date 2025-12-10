@@ -53,5 +53,45 @@ class UtilHelper {
         return $contentTypeOptions;
     }
 
+    /**
+     * Converts bytes into a human-readable format or a specific unit.
+     *
+     * @param int|float $bytes
+     *   The size in bytes.
+     * @param string|null $sizeunit
+     *   Optional. The unit to convert to ('B', 'KB', 'MB', 'GB', 'TB').
+     *   If NULL, it automatically selects the most appropriate unit.
+     *
+     * @return string
+     *   The formatted size with unit (e.g. "5.24 MB").
+     */
+    public static function bytesToSize($bytes, $sizeunit = null) {
+        $units = ['B', 'KB', 'MB', 'GB', 'TB'];
+
+        // Auto mode (no unit specified)
+        if ($sizeunit === null) {
+            for ($i = 0; $bytes >= 1024 && $i < count($units) - 1; $i++) {
+                if ($units[$i] == $sizeunit) {
+                    break;
+                }
+                $bytes /= 1024;
+            }
+            return round($bytes, 2) . ' ' . $units[$i];
+        }
+
+        // Convert to a specific unit
+        $sizeunit = strtoupper($sizeunit);
+        if (!in_array($sizeunit, $units)) {
+            return "Invalid size unit: $sizeunit";
+        }
+
+        $i = array_search($sizeunit, $units);
+
+        // Convert bytes to the exact requested unit
+        $converted = $bytes / pow(1024, $i);
+
+        return round($converted, 2) . ' ' . $sizeunit;
+    }
+
     // END
 }

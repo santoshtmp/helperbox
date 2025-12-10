@@ -64,9 +64,6 @@ class RenderBlock extends FieldPluginBase {
         $block = GetBlock::get_rendered_views_block($view_id, $display_id);
 
         if ($block) {
-            $this->view->element['#attached'][] = $block['#attached'] ?? [];
-            $this->view->element['#cache'][] = $block['#cache'] ?? [];
-
             // 
             $adminlinks = [];
             $attached = [];
@@ -118,7 +115,8 @@ class RenderBlock extends FieldPluginBase {
                 '#adminlinks' => $adminlinks,
                 '#attributes' => [
                     'class' => [
-                        $view_id . '-' . $display_id,
+                        'field-render-content',
+                        'render-' . str_replace('_', '-', $view_id) . '-' . str_replace('_', '-', $display_id),
                         $editaccess ? 'edit-field-helperbox-renderblock contextual-region' : '',
                     ],
                     'data-view' =>  $view_id . '-' . $display_id,
@@ -126,6 +124,8 @@ class RenderBlock extends FieldPluginBase {
                 '#attached' => $attached,
             ];
         }
+
+
 
         return "";
     }

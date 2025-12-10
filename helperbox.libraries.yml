@@ -32,13 +32,13 @@ node_form_conditional_fields:
     - core/drupalSettings
     - core/jquery
 
-date_month_widget:
+helperbox_datetimewidget:
   version: 1.x
   css:
     theme:
-      css/date_month_widget.css: {}
+      css/helperbox_datetimewidget.css: {}
   js:
-    js/date_month_widget.js: {}
+    js/helperbox_datetimewidget.js: {}
   dependencies:
     - core/jquery
     - core/drupal

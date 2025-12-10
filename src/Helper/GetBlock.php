@@ -138,19 +138,21 @@ class GetBlock {
             }
 
             // Set the display (block_11, page_1, etc.)
-            $view->setDisplay($display_id);
-            $view->execute($display_id);
+            // $view->setDisplay($display_id);
+            // $view->execute($display_id);
 
             // Optional: set arguments, exposed input, etc.
             // $view->setArguments(['arg1']);
             // $view->setExposedInput(['field_foo' => 'bar']);
 
             // This builds the full render array exactly as the block would appear
-            // $render_array = $view->buildRenderable($display_id);
-            $render_array = $view->render($display_id);
-            // $render_array = $view->preview($display_id, []);
+            // $render = $view->buildRenderable($display_id);
+            // $render = $view->render($display_id);
+            $render = $view->preview($display_id, []);
 
-            return $render_array;
+            // $render  = \Drupal::service('renderer')->renderPlain($render);
+
+            return $render;
         } catch (\Throwable $th) {
             //throw $th;
         }
