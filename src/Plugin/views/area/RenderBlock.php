@@ -1,26 +1,20 @@
 <?php
 
-namespace Drupal\helperbox\Plugin\views\field;
+namespace Drupal\helperbox\Plugin\views\area;
 
-use Drupal\Core\Template\Attribute;
-use Drupal\views\Plugin\views\field\FieldPluginBase;
-use Drupal\views\ResultRow;
-use Drupal\views\Attribute\ViewsField;
+use Drupal\views\Plugin\views\area\AreaPluginBase;
+use Drupal\views\Annotation\ViewsArea;
 use Drupal\helperbox\Helper\GetBlock;
 
-/**
- * 
- * A handler to provide for helperbox_renderblock.
- * */
-#[ViewsField("helperbox_renderblock")]
-class RenderBlock extends FieldPluginBase {
 
-    /**
-     * {@inheritdoc}
-     */
-    public function query() {
-        // Do nothing -- to override the parent query.
-    }
+
+/**
+ * Renders a block or views block in Views header/footer.
+ *
+ * @ViewsArea("helperbox_renderblock")
+ */
+#[ViewsArea("helperbox_renderblock")]
+class RenderBlock extends AreaPluginBase {
 
     /**
      * {@inheritdoc}
@@ -93,7 +87,7 @@ class RenderBlock extends FieldPluginBase {
     /**
      * {@inheritdoc}
      */
-    public function render(ResultRow $values) {
+    public function render($empty = FALSE) {
 
         $block_type = $this->options['block_type'];
         if (!$block_type) {

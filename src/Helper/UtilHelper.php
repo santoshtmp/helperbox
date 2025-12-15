@@ -37,7 +37,7 @@ class UtilHelper {
         if (is_writable(dirname($log_file))) {
             error_log($log_message, 3, $log_file);
         }
-        \Drupal::messenger()->addMessage(json_encode($log_message), 'yi_error_message');
+        \Drupal::messenger()->addMessage(json_encode($log_message), 'helperbox_error_message');
     }
 
     /**

@@ -5,10 +5,11 @@ This module is maintained by santoshtmp7@gmail.com
 ### Key Features:
 1. Provides template suggestions for forms, paragraphs, fields, colorbox_view_mode_formatter, and other components.
 2. Includes custom Views fields such as node count, nested block rendering, and full HTML text.
-3. Offers custom field formatters, including telephone number formatting and media information display.
-4. Includes the custom Date Month Widget for enhanced date/time input handling.
-5. Provides blocks such as a customizable banner block, menu-related blocks, and more.
-6. Provide form field access control based on node ID, content type, or form ID through the module’s Config Settings Drupal\helperbox\Helper\ConfigSettings::$allfieldrules variables.
+3. Includes custom view header/footer area field. 
+4. Offers custom field formatters, including telephone number formatting and media information display.
+5. Includes the custom Date Month Widget for enhanced date/time input handling.
+6. Provides blocks such as a customizable banner block, menu-related blocks, and more.
+7. Provide form field access control based on node ID, content type, or form ID through the module’s Config Settings Drupal\helperbox\Helper\ConfigSettings::$allfieldrules variables.
 
 ### Reference: 
 1. https://www.drupal.org/documentation

@@ -93,6 +93,8 @@ function helperbox_theme() {
     $theme['helperbox_renderblock'] = [
         'variables' => [
             'content' => '',
+            'block_type' => '',
+            'block_plugin_id' => '',
             'view_id' => '',
             'display_id' => '',
             'adminlinks' => [],
@@ -326,6 +328,9 @@ function helperbox_views_data_alter(array &$data) {
         'title' => t('Render Block'),
         'help'  => t('Display the block content'),
         'field' => [
+            'id' => 'helperbox_renderblock',
+        ],
+        'area' => [
             'id' => 'helperbox_renderblock',
         ],
         'group' => t('HelperBox'),

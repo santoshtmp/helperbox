@@ -21,14 +21,13 @@ use Drupal\views\Views;
  */
 // GetBlock::content_block_data(7);
 // GetBlock::content_block_data(8);
-// GetBlock::settings_data('fimi_yiplcontenttypeblock');
 // GetBlock::settings_data('fimi_footerdescription');
 // GetBlock::settings_data('fimi_views_block__home_block_collection_block_1');
 class GetBlock {
 
 
     /**
-     * @param string $block_machine_id Load a block by its machine name (ID). Example: fimi_yiplcontenttypeblock
+     * @param string $block_machine_id Load a block by its machine name (ID)
      */
     public static function settings_data($block_machine_id) {
         $settings_data = [];
@@ -157,5 +156,41 @@ class GetBlock {
             //throw $th;
         }
         return false;
+    }
+
+    /**
+     * Render a block by its plugin ID and configuration.
+     */
+    public static function render_block($plugin_id, array $config = [], $renderhtml = false) {
+        /** @var \Drupal\Core\Block\BlockManagerInterface $block_manager */
+        $block_manager = \Drupal::service('plugin.manager.block');
+
+        /** @var \Drupal\Core\Render\RendererInterface $renderer */
+        $renderer = \Drupal::service('renderer');
+
+        // 
+        $account = \Drupal::currentUser();
+
+        // block
+        $block = $block_manager->createInstance($plugin_id, $config);
+
+        // Access check (must support bool OR AccessResult).
+        $access = $block->access($account);
+        if ($access instanceof \Drupal\Core\Access\AccessResultInterface) {
+            if (!$access->isAllowed()) {
+                return [];
+            }
+        } elseif ($access === FALSE) {
+            return [];
+        }
+
+        // Build render array.
+        $build = $block->build();
+
+        // 
+        if ($renderhtml) {
+            return $renderer->render($build);
+        }
+        return $build;
     }
 }
