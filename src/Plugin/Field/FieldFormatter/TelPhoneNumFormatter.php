@@ -7,9 +7,11 @@ use Drupal\Core\Field\FormatterBase;
 use Drupal\Core\Field\FieldItemListInterface;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\Url;
+use Drupal\telephone\Plugin\Field\FieldFormatter\TelephoneLinkFormatter;
 
 /**
  * Plugin implementation of the 'Text to phone number' formatter.
+ * \Drupal\telephone\Plugin\Field\FieldFormatter\TelephoneLinkFormatter
  */
 #[FieldFormatter(
     id: 'helperbox_fieldformat_tel_phone_number',
@@ -18,13 +20,14 @@ use Drupal\Core\Url;
         "string",
     ],
 )]
-class TelPhoneNumFormatter extends FormatterBase {
+class TelPhoneNumFormatter extends TelephoneLinkFormatter {
     /**
      * {@inheritdoc}
      */
     public function viewElements(FieldItemListInterface $items, $langcode) {
 
         $elements = [];
+        $title_setting = $this->getSetting('title');
 
         foreach ($items as $delta => $item) {
 
@@ -33,8 +36,8 @@ class TelPhoneNumFormatter extends FormatterBase {
 
             $elements[$delta] = [
                 '#type' => 'link',
-                '#title' => $sanitized,
-                '#url' => Url::fromUri('tel:' . $sanitized),
+                '#title' => $title_setting ?: $sanitized,
+                '#url' => Url::fromUri('tel:' . rawurlencode($sanitized)),
                 '#attributes' => [
                     'class' => ['tel-link'],
                 ],
