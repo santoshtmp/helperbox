@@ -23,6 +23,8 @@ class FieldMaping {
             'suchi_darta' => 'suchi_darta_category',
             'journal_stage' => 'journal_status',
             'notices_type' => 'notices_category',
+            'resources_type' => 'resources_category',
+            'people_type' => 'team_category',
         ];
 
         return $taxonomy_vid;
@@ -103,9 +105,30 @@ class FieldMaping {
                 ],
                 'default_field_value' => [
                     'field_update_category' => [
-                        ['target_id' => '16']
+                        ['target_id' => '314']
                     ]
                 ]
+            ],
+            'nasc_discussion' => [
+                'local_node_type' => 'update',
+                'default_field_value' => [
+                    'field_update_category' => [
+                        ['target_id' => '314']
+                    ],
+                    'field_update_events_category' => [
+                        ['target_id' => '316']
+                    ]
+                ],
+                'fields' => [
+                    'body' => 'body',
+                    'field_image' => [
+                        'field_type' => 'entity_reference',
+                        'field_name' => 'field_featured_image',
+                        'entity_type' => 'media',
+                        "bundle" => "image"
+                    ]
+                ],
+
             ],
             'journal' => [
                 'local_node_type' => 'journals',
@@ -138,20 +161,44 @@ class FieldMaping {
                         "bundle" => "document"
                     ],
                 ],
+            ],
+            'resoures' => [
+                'local_node_type' => 'resources',
+                'fields' => [
+                    'body' => 'body',
+                    'field_cover_image' => [
+                        'field_name' => 'field_featured_image',
+                        'field_type' => 'entity_reference',
+                        'entity_type' => 'media',
+                        "bundle" => "image"
+                    ],
+                    'field_upload_file' => [
+                        'field_type' => 'entity_reference',
+                        'field_name' => 'field_file_upload',
+                        'entity_type' => 'media',
+                        "bundle" => "document"
+                    ],
+                    'field_resources_type' => 'field_resources_category'
+                ],
+            ],
+            'people' => [
+                'local_node_type' => 'team',
+                'fields' => [
+                    'body' => 'body',
+                    'field_profile_picture' => [
+                        'field_name' => 'field_featured_image',
+                        'field_type' => 'entity_reference',
+                        'entity_type' => 'media',
+                        "bundle" => "image"
+                    ],
+                    'field_designation' => 'field_designation',
+                    'field_associated_organization' => 'field_associated_organization',
+                    'field_area_of_specialization' => 'field_area_of_specialization',
+                    'field_education' => 'field_education',
+                    'field_department' => 'field_department',
+                    'field_people_type' => 'field_team_category',
+                ],
             ]
-            // 'resoures' => [
-            //     'local_node_type' => 'resources',
-            //     'fields' => [
-            //         'body' => 'body',
-            //         'field_cover_image' => [
-            //             'field_name' => 'field_featured_image',
-            //             'field_type' => 'entity_reference',
-            //             'entity_type' => 'media',
-            //             "bundle" => "image"
-            //         ],
-            //         'field_resources_type' => 'field_resources_category'
-            //     ],
-            // ]
         ];
 
         return $node_type_field_maping;

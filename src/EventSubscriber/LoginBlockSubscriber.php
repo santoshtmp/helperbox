@@ -62,7 +62,7 @@ class LoginBlockSubscriber implements EventSubscriberInterface {
     }
 
     // Check if the feature is enabled in configuration.
-    if (!HelperboxSettings::get_config('enable_only_alies_login_url')) {
+    if (!HelperboxSettings::get_instance()->get_config('enable_only_alies_login_url')) {
       return;
     }
 

@@ -1,0 +1,20 @@
+{#
+/**
+ * @file
+ * Theme template for pdf viewer
+ */
+#}
+
+{%
+	set classes = [
+        "pdfviewer"
+    ]
+%}
+
+{% set attributes = attributes.addClass(classes) %}
+
+<div {{attributes}}>
+	<a href="{{ file_data.file_path }}">
+		{{ file_data.entity_label }}
+	</a>
+</div>

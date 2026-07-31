@@ -10,9 +10,9 @@ use Drupal\helperbox\Helper\MediaHelper;
 
 /**
  *
- * A handler to provide for helperbox_add_media.
+ * A handler to provide for helperbox_views_field_addmedia.
  * */
-#[ViewsField("helperbox_add_media")]
+#[ViewsField("helperbox_views_field_addmedia")]
 class AddMedia extends FieldPluginBase {
 
     /**
@@ -68,7 +68,7 @@ class AddMedia extends FieldPluginBase {
             '#title' => $this->t('Media ID'),
             '#default_value' => $this->options['media_id'],
             '#description' => $this->t('Enter the media ID to display. You can check and get media from <a href="@link" target="_blank">Media Library</a>.', [
-              '@link' => \Drupal::request()->getSchemeAndHttpHost() . '/admin/content/media',
+                '@link' => \Drupal::request()->getSchemeAndHttpHost() . '/admin/content/media',
             ]),
         ];
 
@@ -82,6 +82,9 @@ class AddMedia extends FieldPluginBase {
 
         // Get the media ID from options, allowing for replacement patterns
         $media_id = $this->options['media_id'] ?? '';
+        if (empty($media_id)) {
+            return '';
+        }
 
         // Get media type and image style from options
         $media_type = $this->options['media_type'] ?? '';

@@ -152,6 +152,10 @@ class GetBlock {
      */
     public static function get_rendered_views_block(string $view_id, string $display_id, $args = [], $return = 'render') {
         try {
+            if (empty($view_id) || empty($display_id)) {
+                return [];
+            }
+
             $view = Views::getView($view_id);
 
             if (!$view || !$view->access($display_id)) {
@@ -165,6 +169,9 @@ class GetBlock {
 
             if (empty($view->result)) {
                 return [];
+            }
+            if ('view_result' == $return) {
+                return $view->result;
             }
 
             $render = $view->render($display_id);

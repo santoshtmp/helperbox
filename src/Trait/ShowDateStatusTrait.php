@@ -88,4 +88,47 @@ trait ShowDateStatusTrait {
             '#value'      => $status,
         ];
     }
+
+
+    /**
+     * Determines the date status for an entity's date range field.
+     *
+     * @param \Drupal\Core\Entity\FieldableEntityInterface $entity
+     *   The entity containing the date range field.
+     * @param string $field_name
+     *   The machine name of the daterange field. Defaults to
+     *   'field_date_range'.
+     *
+     * @return array|null
+     *   A render array for the date status, or NULL if the field is
+     *   missing or empty.
+     */
+    public function getFieldDateRangeStatus(\Drupal\Core\Entity\FieldableEntityInterface $entity, string $field_name = 'field_date_range'): ?array {
+        // Check out early if the entity has no date range field or it's empty.
+        if (!$entity->hasField($field_name) || $entity->get($field_name)->isEmpty()) {
+            return NULL;
+        }
+
+        // Get the first (and presumably only) value of the date range field.
+        $item       = $entity->get($field_name)->first();
+        $start_date = $item->start_date;
+        $end_date   = $item->end_date;
+
+        // Get datetime_type ('date' or 'datetime') from the field storage
+        // settings, defaulting to 'datetime' if not explicitly set.
+        $datetime_type = $entity->get($field_name)
+            ->getFieldDefinition()
+            ->getFieldStorageDefinition()
+            ->getSetting('datetime_type') ?? 'datetime';
+
+        // Delegate to the helper that calculates the actual status
+        // (e.g. whether the range is upcoming, ongoing, or expired).
+        return $this->checkDateStatus(
+            $datetime_type,
+            $start_date,
+            $end_date,
+            TRUE,
+            TRUE,
+        );
+    }
 }

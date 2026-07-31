@@ -4,6 +4,7 @@ namespace Drupal\helperbox\Form;
 
 use Drupal\Core\Form\ConfigFormBase;
 use Drupal\Core\Form\FormStateInterface;
+use Drupal\helperbox\Helper\UtilHelper;
 
 class HelperboxSettingsForm extends ConfigFormBase {
 
@@ -76,6 +77,21 @@ class HelperboxSettingsForm extends ConfigFormBase {
       '#title' => $this->t('Enable unique node/item title per content bundle'),
       '#default_value' => $config->get('enable_unique_node_per_bundle'),
       '#description' => $this->t('When enabled, only one node/item title will be allowed per content type bundle.'),
+    ];
+
+    $form['unique_node_content_type'] = [
+      '#type' => 'select',
+      '#title' => $this->t('Content Types Bundle'),
+      '#options' => UtilHelper::get_all_node_content_type(),
+      '#default_value' => $config->get('unique_node_content_type') ?? [],
+      '#multiple' => TRUE,
+      '#description' => $this->t('If content types are selected, uniqueness will apply only to those types. If none are selected, it will apply to all content types.'),
+      '#size' => 8,
+      '#states' => [
+        'visible' => [
+          ':input[name="enable_unique_node_per_bundle"]' => ['checked' => TRUE],
+        ],
+      ],
     ];
 
     // Field Rules Configuration
@@ -272,6 +288,7 @@ class HelperboxSettingsForm extends ConfigFormBase {
       ->set('enable_media_custom_thumbnail', $form_state->getValue('enable_media_custom_thumbnail'))
       ->set('enable_only_alies_login_url', $form_state->getValue('enable_only_alies_login_url'))
       ->set('enable_unique_node_per_bundle', $form_state->getValue('enable_unique_node_per_bundle'))
+      ->set('unique_node_content_type', $form_state->getValue('unique_node_content_type'))
       ->set('field_all_rules', $field_all_rules ? json_decode($field_all_rules, TRUE) : [])
       ->set('field_rules_node', $field_rules_node ? json_decode($field_rules_node, TRUE) : [])
       ->set('field_rules_form', $field_rules_form ? json_decode($field_rules_form, TRUE) : [])

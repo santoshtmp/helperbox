@@ -117,74 +117,169 @@
     });
   }
 
-  // ---------------------------------------------------------------------------
-  // Training structure UI logic
-  // ---------------------------------------------------------------------------
+  /**
+   * Gets a form element's current value(s) as an array of strings.
+   *
+   * @param {jQuery} $el
+   *   Trigger element.
+   * @return {string[]}
+   *   Current value(s), normalized to an array of strings.
+   */
+  function fieldstatus_getCurrentValueAsArray($el) {
+    const val = $el.val();
+    if (val === null || val === undefined) {
+      return [];
+    }
+    return Array.isArray(val) ? val.map(String) : [String(val)];
+  }
 
   /**
-   * Applies form field visibility based on the selected training structure.
+   * Evaluates one condition group (AND across selectors, OR within each).
    *
-   * Reads the current value of the training structure select element and
-   * toggles two mutually exclusive sets of field groups and fields:
-   *
-   *  - "instance": show instance-specific groups/fields; hide main ones.
-   *  - any other value: show main groups/fields; hide instance-specific ones.
-   *
-   * After updating visibility, programmatically clicks the "Overview" tab to
-   * prevent the user from remaining on a tab that has just been hidden.
-   *
-   * @param {HTMLElement} selectTrainingStructureElement
-   *   The <select> element for field_training_structure.
-   * @param {string[]} main_training_groups
-   *   Field group machine names shown only for main (non-instance) trainings.
-   * @param {string[]} main_training_fields
-   *   Field machine names shown only for main (non-instance) trainings.
-   * @param {string[]} instance_training_groups
-   *   Field group machine names shown only for instance trainings.
-   * @param {string[]} instance_training_fields
-   *   Field machine names shown only for instance trainings.
+   * @param {Object} group
+   *   Condition group keyed by trigger selector.
+   * @param {Element|Document} context
+   *   DOM context to scope trigger lookups to.
+   * @return {boolean}
+   *   True if all selectors' conditions are satisfied.
    */
-  function updateTrainingEditFormUIByTrainingstructure(
-    selectTrainingStructureElement,
-    main_training_groups,
-    main_training_fields,
-    instance_training_groups,
-    instance_training_fields
-  ) {
-    const trainingStructureVal = $(selectTrainingStructureElement).val();
+  function fieldstatus_evaluateConditionGroup(group, context) {
+    return Object.keys(group).every(function (selector) {
+      const $target = $(selector, context);
+      if (!$target.length) {
+        return false;
+      }
+      const conditions = group[selector];
 
-    if (trainingStructureVal === 'instance') {
-      hideGroupDetails(main_training_groups);
-      hideFieldWrapper(main_training_fields);
-      showGroupDetails(instance_training_groups);
-      showFieldWrapper(instance_training_fields);
+      return conditions.some(function (cond) {
+        if (Object.prototype.hasOwnProperty.call(cond, 'checked')) {
+          return $target.is(':checked') === cond.checked;
+        }
+        if (Object.prototype.hasOwnProperty.call(cond, 'value')) {
+          const current = fieldstatus_getCurrentValueAsArray($target);
+          const expected = Array.isArray(cond.value) ? cond.value.map(String) : [String(cond.value)];
+          // Containment: true if any current value is in the expected set.
+          const matches = current.some(function (v) {
+            return expected.includes(v);
+          });
+          // negate: true means "condition met when there's NO overlap".
+          return cond.negate ? !matches : matches;
+        }
+        return false;
+      });
+    });
+  }
+
+  /**
+   * Evaluates a rule (array of condition groups, OR'd together).
+   *
+   * @param {Object[]} ruleArray
+   *   Condition groups to OR together.
+   * @param {Element|Document} context
+   *   DOM context passed through to group evaluation.
+   * @return {boolean}
+   *   True if any group is satisfied.
+   */
+  function fieldstatus_evaluateRule(ruleArray, context) {
+    return ruleArray.some(function (group) {
+      return fieldstatus_evaluateConditionGroup(group, context);
+    });
+  }
+
+  /**
+   * Shows/hides a wrapper based on a state key ('visible', 'invisible', '!visible').
+   *
+   * @param {HTMLElement} wrapper
+   *   Target element to show/hide.
+   * @param {string} stateKey
+   *   'visible', 'invisible', or '!visible'.
+   * @param {boolean} result
+   *   Evaluated rule result.
+   * @return {void}
+   */
+  function fieldstatus_applyState(wrapper, stateKey, result) {
+    let show;
+    if (stateKey === 'visible') {
+      show = result;
+    }
+    else if (stateKey === 'invisible' || stateKey === '!visible') {
+      show = !result;
     }
     else {
-      hideGroupDetails(instance_training_groups);
-      hideFieldWrapper(instance_training_fields);
-      showGroupDetails(main_training_groups);
-      showFieldWrapper(main_training_fields);
+      return;
     }
+    wrapper.style.display = show ? '' : 'none';
+  }
 
-    // Return focus to the Overview tab so the user is never left viewing
-    // a tab that has just been hidden.
-    $('a[href="#edit-group-overview"]')[0]?.click();
+  /**
+   * Re-evaluates every target field's rules and applies the result.
+   *
+   * @param {Object} fieldStatusDependencies
+   *   Full config, keyed by target field machine name.
+   * @param {Element|Document} context
+   *   DOM context to scope element lookups to.
+   * @return {void}
+   */
+  function fieldstatus_evaluateAll(fieldStatusDependencies, context) {
+    Object.keys(fieldStatusDependencies).forEach(function (fieldName) {
+      const wrapperEl = document.getElementById(fieldToElementId(fieldName));
+      if (!wrapperEl) {
+        return;
+      }
+      const fieldConfig = fieldStatusDependencies[fieldName];
+      Object.keys(fieldConfig).forEach(function (stateKey) {
+        const result = fieldstatus_evaluateRule(fieldConfig[stateKey], context);
+        fieldstatus_applyState(wrapperEl, stateKey, result);
+      });
+    });
+  }
+
+  /**
+  * Entry point: binds change listeners for all triggers in the config and
+  * runs an initial evaluation. Call from a Drupal.behaviors attach().
+  *
+  * @param {Object} fieldStatusDependencies
+  *   Full config, keyed by target field machine name.
+  *   Config shape:
+  *   {
+  *     [targetField]: {
+  *       visible: [ { selector: [{value:[...]}, ...], ... }, ... ], // OR'd groups
+  *       '!visible': [ ... ] // alias for invisible
+  *     }
+  *   }
+  *   - Keys within a group = AND. Conditions within a selector's array = OR.
+  *   - { value: [...] } = containment match. { checked: true } = checkbox state.
+  * @param {Element|Document} context
+  *   DOM context passed from the Drupal behavior's attach() callback.
+  * @return {void}
+  */
+  function apply_helperbox_fieldstatus_dependencies(fieldStatusDependencies, context) {
+    // Collect all unique trigger selectors so each gets exactly one listener.
+    const triggerSelectors = new Set();
+    Object.values(fieldStatusDependencies).forEach(function (fieldConfig) {
+      Object.values(fieldConfig).forEach(function (ruleArray) {
+        ruleArray.forEach(function (group) {
+          Object.keys(group).forEach(function (selector) {
+            triggerSelectors.add(selector);
+          });
+        });
+      });
+    });
+
+    // Use jQuery's .on() — Select2 dispatches change via jQuery, not native events.
+    triggerSelectors.forEach(function (selector) {
+      once('helperbox-status-trigger', selector, context).forEach(function (el) {
+        $(el).on('change', () => fieldstatus_evaluateAll(fieldStatusDependencies, context));
+      });
+    });
+
+    // Set correct initial state before any user interaction.
+    fieldstatus_evaluateAll(fieldStatusDependencies, context);
   }
 
   // ---------------------------------------------------------------------------
   // Drupal behaviors
   // ---------------------------------------------------------------------------
-
-  /**
-   * Placeholder behavior reserved for future conditional field logic.
-   *
-   * @type {Drupal~behavior}
-   */
-  Drupal.behaviors.nodeFormConditionalFields = {
-    attach: function (context) {
-      // Reserved for additional conditional field behaviors.
-    },
-  };
 
   /**
    * Toggles field groups and fields based on training structure, and controls
@@ -217,6 +312,57 @@
    */
   Drupal.behaviors.trainingStructureChange = {
     attach: function (context) {
+
+      /**
+       * Applies form field visibility based on the selected training structure.
+       *
+       * Reads the current value of the training structure select element and
+       * toggles two mutually exclusive sets of field groups and fields:
+       *
+       *  - "instance": show instance-specific groups/fields; hide main ones.
+       *  - any other value: show main groups/fields; hide instance-specific ones.
+       *
+       * After updating visibility, programmatically clicks the "Overview" tab to
+       * prevent the user from remaining on a tab that has just been hidden.
+       *
+       * @param {HTMLElement} selectTrainingStructureElement
+       *   The <select> element for field_training_structure.
+       * @param {string[]} main_training_groups
+       *   Field group machine names shown only for main (non-instance) trainings.
+       * @param {string[]} main_training_fields
+       *   Field machine names shown only for main (non-instance) trainings.
+       * @param {string[]} instance_training_groups
+       *   Field group machine names shown only for instance trainings.
+       * @param {string[]} instance_training_fields
+       *   Field machine names shown only for instance trainings.
+       */
+      function updateTrainingEditFormUIByTrainingstructure(
+        selectTrainingStructureElement,
+        main_training_groups,
+        main_training_fields,
+        instance_training_groups,
+        instance_training_fields
+      ) {
+        const trainingStructureVal = $(selectTrainingStructureElement).val();
+
+        if (trainingStructureVal === 'instance') {
+          hideGroupDetails(main_training_groups);
+          hideFieldWrapper(main_training_fields);
+          showGroupDetails(instance_training_groups);
+          showFieldWrapper(instance_training_fields);
+        }
+        else {
+          hideGroupDetails(instance_training_groups);
+          hideFieldWrapper(instance_training_fields);
+          showGroupDetails(main_training_groups);
+          showFieldWrapper(main_training_fields);
+        }
+
+        // Return focus to the Overview tab so the user is never left viewing
+        // a tab that has just been hidden.
+        $('a[href="#edit-group-overview"]')[0]?.click();
+      }
+
 
       // -----------------------------------------------------------------------
       // Training structure: toggle main vs. instance field groups and fields.
@@ -347,184 +493,406 @@
     },
   };
 
-  // ---------------------------------------------------------------------------
-  // Training participant group filter behavior
-  // ---------------------------------------------------------------------------
-
   /**
-   * Replaces the participant group filter text input with dynamic radio buttons
-   * and filters participant rows based on the selected group.
-   *
-   * On attach, the raw text input for field_participant_group_filter is hidden
-   * and replaced with a set of radio buttons. An "All" option is added by
-   * default; additional options are generated from the group values already
-   * selected in participant row select fields.
-   *
-   * When a radio button is selected:
-   *  - The corresponding filter value is written back to the hidden text field.
-   *  - Each participant row is shown or hidden based on whether its group
-   *    matches the active filter (unassigned rows with '_none' always show).
-   *
-   * @type {Drupal~behavior}
+   * Team content type node form
    */
-  Drupal.behaviors.trainingParticipantGroupFilter = {
+  Drupal.behaviors.teamFormStructureChange = {
     attach: function (context) {
 
-      /** @type {string[]} Group values already represented as radio options, used to avoid duplicates. */
-      let selectedGroupValues = [];
+      // Show/hide the designation field and team category designation field based on the checkbox value.
+      once('node-team-form', '.node-type-team', context)
+        .forEach(function (element) {
+          // --- Config: same shape as Drupal's #states, but array values use "contains any" matching. ---
+          const $teamFieldStatusDependencies = {
+            "field_team_category_designation": {
+              "visible": [
+                {
+                  // '[name="field_team_category[]"]': [
+                  //   { "value": ['240', '301'], negate: true },
+                  // ],
+                  '[name="field_designation_by_category[value]"]': [
+                    { "checked": true }
+                  ]
+                }
+              ]
+            },
+            "field_speakers_topic_by_conferen": {
+              "visible": [
+                {
+                  '[name="field_team_category[]"]': [
+                    { value: ['240'] }
+                  ]
+                }
+              ]
+            },
+            "field_conference_committee_desig": {
+              "visible": [
+                {
+                  '[name="field_team_category[]"]': [
+                    { value: ['301'] }
+                  ]
+                }
+              ]
+            },
+          };
+          // 
+          apply_helperbox_fieldstatus_dependencies($teamFieldStatusDependencies, element);
+        });
 
-      /**
-       * Appends a radio button option to the participant group filter list.
-       *
-       * Creates the filter option list wrapper if it does not yet exist.
-       * Silently skips insertion if an option with the same value is already
-       * present (checked by ID).
-       *
-       * @param {string} value
-       *   The option value (e.g. a taxonomy term ID, or 'all').
-       * @param {string} label
-       *   Human-readable label rendered next to the radio button.
-       * @param {boolean} [active=false]
-       *   Whether the radio button should be rendered in the checked state.
-       */
-      function addParticipantGroupFilterOption(value, label, active = false) {
-        if ($('#participant-group-filter-' + value).length) {
+      // Get the current team category designation values from the paragraphs.
+      function getCurrentTeamCategoryDesignation() {
+        let current_team_category_designation = {};
+        $('.paragraph-type--team-category-designation .paragraphs-subform').each(function (index) {
+          let category_id = $(this)
+            .find('select[name$="[field_team_category]"]')
+            .val();
+          let current_designation = $(this)
+            .find('input[name^="field_team_category_designation"][name*="[field_designation]"][name$="[value]"]')
+            .val();
+          current_team_category_designation[category_id] = current_designation;
+        });
+        return current_team_category_designation;
+      }
+
+      // Sync the number of paragraphs with the number of selected team categories, and populate the values accordingly.
+      function syncParagraphsTeamCategoryDesignation(categoryIds, teamCategoryDesignation) {
+        let $paragraphType = $('.paragraph-type--team-category-designation');
+        let $paragraphTypeSubform = $paragraphType.find('.paragraphs-subform');
+        let currentNum = $paragraphTypeSubform.length;
+        let requiredNum = categoryIds.length;
+
+        // Need to add more paragraphs.
+        if (currentNum < requiredNum) {
+          $(document).one('ajaxComplete', function () {
+            syncParagraphsTeamCategoryDesignation(categoryIds, teamCategoryDesignation);
+          });
+
+          let $addButton = $('input[name="field_team_category_designation_team_category_designation_add_more"]');
+          $addButton.trigger('mousedown').trigger('click');
+
           return;
         }
 
-        const checked = active ? 'checked' : '';
+        // Need to remove extra paragraphs.
+        if (currentNum > requiredNum) {
+          $(document).one('ajaxComplete', function () {
+            syncParagraphsTeamCategoryDesignation(categoryIds, teamCategoryDesignation);
+          });
 
-        const option = `
-          <div class="form-type--radio form-type--boolean participant-group-filter-option">
-            <input
-              type="radio"
-              name="training_participant_group_filter"
-              value="${value}"
-              class="form-radio form-boolean form-boolean--type-radio"
-              id="participant-group-filter-${value}"
-              ${checked}
-            >
-            <label
-              for="participant-group-filter-${value}"
-              class="form-item__label option"
-            >
-              ${label}
-            </label>
-          </div>
-        `;
+          let $removeButton = $paragraphType
+            .last()
+            .find('.paragraphs-actions input[name*="field_team_category_designation_"][name$="_remove"]');
+          $removeButton.trigger('mousedown').trigger('click');
 
-        const wrapperId = 'training-participant-group-filter-option-list';
-        let $filterList = $('#' + wrapperId);
-
-        // Create the radio group wrapper on first use.
-        if (!$filterList.length) {
-          $('#edit-field-participant-group-filter-wrapper').append(`
-            <div
-              id="${wrapperId}"
-              class="form-radios form-boolean-group participant-group-filter-option-list"
-            ></div>
-          `);
-          $filterList = $('#' + wrapperId);
+          return;
         }
 
-        $filterList.append(option);
+        // Counts match, populate the values.
+        $paragraphTypeSubform.each(function (index) {
+          const categoryid = categoryIds[index] ?? '';
+          const $select_field_team_category = $(this).find('select[name$="[field_team_category]"]');
+          $select_field_team_category.val(categoryid).trigger('change');
+          makeSelectReadonly($select_field_team_category);
+
+          let designation = (teamCategoryDesignation || {})[categoryid] ?? '';
+          const $field_team_category_designation = $(this).find('input[name^="field_team_category_designation"][name*="[field_designation]"][name$="[value]"]');
+          $field_team_category_designation.val(designation);
+
+          disableDesignationForCategory(categoryid, $field_team_category_designation);
+        });
       }
 
       /**
-       * Shows or hides a single participant row based on the active filter.
-       *
-       * A row is visible when any of the following is true:
-       *  - The active filter is 'all' or empty (no filter applied).
-       *  - The row's group value matches the active filter value.
-       *  - The row's group value is empty or '_none' (unassigned rows always show).
-       *
-       * @param {jQuery} $element
-       *   The group <select> element within the participant row.
-       * @param {string} currentFilterValue
-       *   The currently active filter value.
+        * Disables the designation field for categories where designation is not allowed.
+       * 
+       * @param {*} categoryid 
+       * @param {*} designationElement 
        */
-      function participationListHideShow($element, currentFilterValue) {
-        const value = $element.val();
-        const $row = $element.closest('tr.paragraph-type--participant');
-
-        const shouldShow =
-          currentFilterValue === value ||
-          currentFilterValue === 'all' ||
-          currentFilterValue === '' ||
-          value === '' ||
-          value === '_none';
-
-        $row.toggle(shouldShow);
+      function disableDesignationForCategory(categoryid, designationElement) {
+        const $disableDesignationCategoryIDs = ['240', '301'];
+        if ($disableDesignationCategoryIDs.includes(categoryid)) {
+          designationElement.val('');
+          makeSelectReadonly(designationElement);
+          designationElement.after('<div>Designation is not allowed for this team category.</div>');
+        }
       }
 
-      // Initialize the filter wrapper once: hide the raw text input and insert
-      // the default "All" radio option.
-      once('participant-group-filter-option', '#edit-field-participant-group-filter-wrapper', context)
-        .forEach(function (participantGroupFilter) {
-          $(participantGroupFilter).find('input[type="text"]').hide();
-          addParticipantGroupFilterOption('all', 'All', true);
+      // Make a select element readonly by disabling pointer events and blocking keydown events that can change the selection.
+      function makeSelectReadonly($select) {
+        $select.css({
+          'background': 'lightgray',
+          'pointer-events': 'none'
         });
 
-      // Process each participant group <select> once:
-      //  - Register its current value as a radio filter option.
-      //  - Apply the currently active filter to show/hide its row on load.
-      //  - Add new radio options dynamically as the user changes group values.
-      once('participant-group-option', 'select[data-drupal-selector$="subform-field-participant-group"]', context)
-        .forEach(function (element) {
-          const $select = $(element);
-          const value = $select.val();
-          const label = $select.find('option:selected').text();
+        // Remove any existing handler to avoid duplicates.
+        $select.off('keydown.readonly');
 
-          // Read the persisted filter value from the hidden field and apply it.
-          const currentFilter = $('input[name="field_participant_group_filter[0][value]"]').val();
-          participationListHideShow($select, currentFilter);
-
-          // Register a radio option for any pre-selected (non-empty) group.
-          if (value && value !== '_none' && !selectedGroupValues.includes(value)) {
-            selectedGroupValues.push(value);
-            addParticipantGroupFilterOption(value, label, value === currentFilter);
+        $select.on('keydown.readonly', function (e) {
+          // Allow Tab and Shift+Tab.
+          if (e.key === 'Tab') {
+            return;
           }
 
-          // When the user picks a new group for this participant, register it.
-          $select.on('change', function () {
-            const newValue = $(this).val();
-            const newLabel = $(this).find('option:selected').text();
-
-            if (newValue && newValue !== '_none' && !selectedGroupValues.includes(newValue)) {
-              selectedGroupValues.push(newValue);
-              addParticipantGroupFilterOption(newValue, newLabel, newValue === currentFilter);
-            }
-          });
-
+          // Block keys that can change the selection.
+          if (
+            e.key === 'ArrowUp' ||
+            e.key === 'ArrowDown' ||
+            e.key === 'ArrowLeft' ||
+            e.key === 'ArrowRight' ||
+            e.key === 'Enter' ||
+            e.key === ' ' ||
+            e.key === 'Spacebar'
+          ) {
+            e.preventDefault();
+            e.stopPropagation();
+          }
         });
+      }
 
-      // Listen for radio button changes within the participants tab group.
-      // On change: persist the selected value to the hidden field and
-      // re-evaluate visibility for every participant row.
-      once('detail-group-participants-wrapper', '#edit-group-participants', context)
+      // Get the team category select element.
+      const $field_team_category = '.field--name-field-team-category select[name="field_team_category[]"]';
+
+      // Show/hide the designation field and team category designation field based on the number of selected team categories.
+      once('field--name-field-team-category', $field_team_category, context)
         .forEach(function (element) {
-          const $wrapper = $(element);
+          $(element).on('change', function () {
+            let updated_team_category_ids = $(this).val();
+            // updateFieldVisibilityByCategory(updated_team_category_ids, $fieldVisibilityByCategory);
+            syncParagraphsTeamCategoryDesignation(
+              updated_team_category_ids,
+              getCurrentTeamCategoryDesignation()
+            );
 
-          $wrapper.on('change', 'input[name="training_participant_group_filter"]', function () {
-            const currentFilterValue = $(this).val();
+          });
 
-            // Write the selected filter back to the underlying hidden/text field.
-            $wrapper
-              .find('input[name="field_participant_group_filter[0][value]"]')
-              .val(currentFilterValue)
-              .trigger('change');
+        });
 
-            // Re-evaluate visibility for every participant row.
-            $wrapper
-              .find('#edit-field-participants-wrapper .paragraph-type--participant select[data-drupal-selector$="subform-field-participant-group"]')
-              .each(function () {
-                participationListHideShow($(this), currentFilterValue);
-              });
+      // Show/hide the designation field and team category designation field based on the number of selected team categories when select2 is used.
+      once('field--name-field-team-category-select2', '.field--name-field-team-category .select2-selection__rendered', context)
+        .forEach(function (element) {
+          $(element).on('update', function () {
+            setTimeout(function () {
+              let updated_team_category_ids = $($field_team_category).val();
+              syncParagraphsTeamCategoryDesignation(
+                updated_team_category_ids,
+                getCurrentTeamCategoryDesignation()
+              );
+            }, 100);
+
           });
         });
 
-    },
+      // Default sync the paragraphs with the selected team categories on page load.
+      once('team-category-designation', '#edit-field-team-category-designation-wrapper', context)
+        .forEach(function (element) {
+          let updated_team_category_ids = $($field_team_category).val();
+          // updateFieldVisibilityByCategory(updated_team_category_ids, $fieldVisibilityByCategory);
+
+          let length = $(element).find('.paragraph-type--team-category-designation').length;
+          if (length == 0) {
+            syncParagraphsTeamCategoryDesignation(
+              updated_team_category_ids,
+              getCurrentTeamCategoryDesignation()
+            );
+          } else {
+            // Paragraphs already exist on load — just lock their category selects as readonly.
+            const $select = $(element).find('select[name$="[field_team_category]"]');
+            makeSelectReadonly($select);
+
+            $(element).find('.paragraphs-subform').each(function (index) {
+              const categoryid = $(this).find('select[name$="[field_team_category]"]').val();
+              const $field_team_category_designation = $(this).find('input[name^="field_team_category_designation"][name*="[field_designation]"][name$="[value]"]');
+              disableDesignationForCategory(categoryid, $field_team_category_designation);
+            });
+          }
+
+        });
+
+    }
+  };
+
+  /**
+   * content type node form
+   */
+  Drupal.behaviors.nodeFormStructure = {
+    attach: function (context) {
+
+      once('faq-category-tabs', '#edit-field-faqs-wrapper', context).forEach(function (wrapper) {
+
+        const $wrapper = $(wrapper);
+        const $select = $(wrapper)
+          .find('.field--name-field-faq-category select')
+          .first();
+
+        if (!$select.length) {
+          return;
+        }
+
+        // Create tabs.
+        let $tabs = $('.faq-category-tabs');
+        if (!$tabs.length) {
+          $tabs = $('<div class="faq-category-tabs"></div>');
+
+          $select.find('option').each(function () {
+            const value = $(this).val();
+            let text = $(this).text().trim();
+
+            if (!value) {
+              return;
+            }
+
+            if (value === '_none') {
+              text = 'All';
+            }
+
+            $tabs.append(`
+            <button
+              type="button"
+              class="faq-category-tab"
+              data-value="${value}">
+              ${text}
+            </button>
+          `);
+          });
+
+          // Make the first tab active.
+          $tabs.find('.faq-category-tab').first().addClass('active');
+
+          // Insert tabs before the FAQ field.
+          $wrapper.before($tabs);
+
+          // Tab click.
+          $tabs.on('click', '.faq-category-tab', function () {
+            $tabs.find('.faq-category-tab').removeClass('active');
+            $(this).addClass('active');
+
+            // filter faq row
+            const currentFilter = $('.faq-category-tab.active').data('value') || '_none';
+            $('#edit-field-faqs-wrapper tr.paragraph-type--faqs').each(function () {
+              const $faq = $(this);
+              const currentCategory = $faq
+                .find('.field--name-field-faq-category select')
+                .val();
+              if (currentFilter == '_none' || currentCategory == '_none' || currentFilter == currentCategory) {
+                $faq.show();
+              } else {
+                $faq.hide();
+              }
+            });
+          });
+        }
+
+      });
+
+      once('faq-category-option', 'select[data-drupal-selector$="-subform-field-faq-category"]', context)
+        .forEach(function (element) {
+          const $select = $(element);
+          let currentCategory = $select.val();
+          const currentFilter = $('.faq-category-tab.active').data('value') || '_none';
+          const $faq = $select.closest('tr.paragraph-type--faqs');
+          if (currentFilter == '_none' || currentCategory == currentFilter || currentCategory == '_none') {
+            $faq.show();
+          }
+          else {
+            $faq.hide();
+          }
+        });
+    }
 
   };
 
+  /**
+  * resources content type node form
+  */
+  Drupal.behaviors.resourcesContentType = {
+    attach: function (context) {
+      // for resources form
+      once('node-resources-form', '.node-type-resources', context)
+        .forEach(function (element) {
+          const $resourcesFieldStatusDependencies = {
+            // author from team member
+            "field_contact_person": {
+              "visible": [
+                {
+                  '[name="field_resources_category"]': [
+                    { "value": ['1', '302', '303'] },
+                  ],
+                }
+              ]
+            },
+            // author external person
+            "field_text_3": {
+              "visible": [
+                {
+                  '[name="field_resources_category"]': [
+                    { "value": ['1', '302', '303'] },
+                  ],
+                }
+              ]
+            },
+            // field_keywords
+            "field_keywords": {
+              "visible": [
+                {
+                  '[name="field_resources_category"]': [
+                    { "value": ['1'] },
+                  ],
+                }
+              ]
+            },
+            // field_fiscal_year_b_s
+            "field_fiscal_year_b_s": {
+              "visible": [
+                {
+                  '[name="field_resources_category"]': [
+                    { "value": ['303'] },
+                  ],
+                }
+              ]
+            },
+          };
+          // 
+          apply_helperbox_fieldstatus_dependencies($resourcesFieldStatusDependencies, element);
+        });
+    }
+  };
+
+  /**
+  * notices content type node form
+  */
+  Drupal.behaviors.noticesContentType = {
+    attach: function (context) {
+      // for notices form
+      once('node-notices-form', '.node-type-notices', context)
+        .forEach(function (element) {
+          const $noticesFieldStatusDependencies = {
+            // field_deadline
+            "field_deadline": {
+              "visible": [
+                {
+                  '[name="field_notices_category"]': [
+                    { "value": ['8', '134'] },
+                  ],
+                }
+              ]
+            },
+            // field_email
+            "field_email": {
+              "visible": [
+                {
+                  '[name="field_notices_category"]': [
+                    { "value": ['134'] },
+                  ],
+                }
+              ]
+            },
+          };
+          // 
+          apply_helperbox_fieldstatus_dependencies($noticesFieldStatusDependencies, element);
+        });
+    }
+  };
+
 })(jQuery, Drupal, drupalSettings, once);
+
+

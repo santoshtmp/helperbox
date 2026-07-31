@@ -3,6 +3,7 @@
 namespace Drupal\helperbox\Plugin\Block;
 
 use Drupal\block_content\Entity\BlockContent;
+use Drupal\Component\Utility\Html;
 use Drupal\Core\Block\Attribute\Block;
 use Drupal\Core\Block\BlockBase;
 use Drupal\Core\Entity\ContentEntityInterface;
@@ -12,8 +13,10 @@ use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Plugin\ContainerFactoryPluginInterface;
 use Drupal\Core\Routing\RouteMatchInterface;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
+use Drupal\Core\Url;
 use Drupal\helperbox\Helper\GetBlock;
 use Drupal\helperbox\Helper\MediaHelper;
+use Drupal\helperbox\Helper\PartialsContent;
 use Drupal\helperbox\Trait\ShowDateStatusTrait;
 use Drupal\node\NodeInterface;
 use Drupal\taxonomy\TermInterface;
@@ -347,31 +350,13 @@ class HeroBannerBlock extends BlockBase implements ContainerFactoryPluginInterfa
             // 
             switch ($entity_bundle) {
                 case 'trainings':
-                    $banner_data['terms'] = $this->resolveNodeTerms($entity, ['trainings_category']);
-                    if ($entity->hasField('field_date_range') && !$entity->get('field_date_range')->isEmpty()) {
-                        $item       = $entity->get('field_date_range')->first();
-                        $start_date = $item->start_date;
-                        $end_date   = $item->end_date;
-
-                        // Get datetime_type from field storage settings.
-                        $datetime_type = $entity->get('field_date_range')
-                            ->getFieldDefinition()
-                            ->getFieldStorageDefinition()
-                            ->getSetting('datetime_type') ?? 'datetime';
-
-                        $banner_data['date_status'] = $this->checkDateStatus(
-                            $datetime_type,
-                            $start_date,
-                            $end_date,
-                            TRUE,
-                            TRUE,
-                        );
-                    }
-
                     $field_training_structure = '';
                     if ($entity->hasField('field_training_structure') && !$entity->get('field_training_structure')->isEmpty()) {
                         $field_training_structure = $entity->get('field_training_structure')->value;
                     }
+
+                    $banner_data['terms'] = $this->resolveNodeTerms($entity, ['trainings_category']);
+                    $banner_data['date_status'] = $field_training_structure == 'instance' ?  $this->getFieldDateRangeStatus($entity) : '';
 
                     if (
                         $entity->hasField('field_parent_training') &&
@@ -384,17 +369,19 @@ class HeroBannerBlock extends BlockBase implements ContainerFactoryPluginInterfa
                             $short_name = $parent_entity->hasField('field_short_name') && !$parent_entity->get('field_short_name')->isEmpty()
                                 ? $parent_entity->get('field_short_name')->value
                                 : $parent_entity->getTitle();
+
+                            $attributes = [];
+                            $attributes['class'] = 'cta-wrapper link-btn cta-link';
+
                             $banner_data['cta'] = [
-                                '#theme'       => 'helperbox_add_cta',
+                                '#theme'       => 'helperbox_component_cta',
                                 '#cta_url'     => $urltostring,
                                 '#cta_label' => $this->t('Learn about @name', ['@name' => $short_name]),
                                 '#cta_type'    => 'link',
                                 '#cta_target'  => null,
                                 '#is_external' => false,
                                 '#is_no_link'  => FALSE,
-                                '#attributes'  =>  new \Drupal\Core\Template\Attribute([
-                                    'class' => ' cta-link'
-                                ]),
+                                '#attributes'  => new \Drupal\Core\Template\Attribute($attributes),
                                 '#wrapper_attributes'     => new \Drupal\Core\Template\Attribute([
                                     'class' => 'parent-training',
                                 ])
@@ -405,15 +392,17 @@ class HeroBannerBlock extends BlockBase implements ContainerFactoryPluginInterfa
 
                 case 'hall':
                     $banner_data['terms'] = $this->resolveNodeTerms($entity);
+                    $attributes = [];
+                    $attributes['class'] = 'cta-wrapper link-btn';
                     $banner_data['cta'] = [
-                        '#theme'       => 'helperbox_add_cta',
+                        '#theme'       => 'helperbox_component_cta',
                         '#cta_url'     => '/book-hall?select_hall=' . $entity_id,
                         '#cta_label'   =>  $this->t("Book Hall"),
                         '#cta_type'    => 'link',
                         '#cta_target'  => null,
                         '#is_external' => false,
                         '#is_no_link'  => FALSE,
-                        '#attributes'  =>  new \Drupal\Core\Template\Attribute([]),
+                        '#attributes'  => new \Drupal\Core\Template\Attribute($attributes),
                         '#wrapper_attributes'     => new \Drupal\Core\Template\Attribute([
                             'class' => 'cta-link',
                         ])
@@ -421,11 +410,11 @@ class HeroBannerBlock extends BlockBase implements ContainerFactoryPluginInterfa
                     break;
 
                 case 'team':
-                    $banner_data['terms'] = $this->resolveNodeTerms($entity, ['team_category']);
-
-                    if ($entity->hasField('field_designation') && !$entity->get('field_designation')->isEmpty()) {
-                        $banner_data['field']['field_designation'] = $entity->get('field_designation')->value;
-                    }
+                    // $banner_data['terms'] = $this->resolveNodeTerms($entity, ['team_category']);
+                    // $data = PartialsContent::getTeamCategoryDesignation($entity);
+                    // if ($entity->hasField('field_designation') && !$entity->get('field_designation')->isEmpty()) {
+                    //     $banner_data['field']['field_designation'] = $entity->get('field_designation')->value;
+                    // }
 
                     if ($entity->hasField('field_additional_role') && !$entity->get('field_additional_role')->isEmpty()) {
                         $banner_data['field']['field_additional_role'] = $entity->get('field_additional_role')->value;
@@ -441,6 +430,16 @@ class HeroBannerBlock extends BlockBase implements ContainerFactoryPluginInterfa
                             'label' => $this->getBundleLabel($entity)
                         ]
                     ];
+                    break;
+                case 'conferences':
+                    $banner_data['terms'] = [
+                        [
+                            'type' => $entity_type,
+                            'bundle' => $entity_bundle,
+                            'label' => $this->getBundleLabel($entity)
+                        ]
+                    ];
+                    // $banner_data['date_status'] = $this->getFieldDateRangeStatus($entity);
                     break;
                 case 'resources':
                     $banner_data['terms'] = $this->resolveNodeTerms($entity, ['resources_category']);
@@ -552,15 +551,17 @@ class HeroBannerBlock extends BlockBase implements ContainerFactoryPluginInterfa
                     $cta_items = $block_entity->get('field_cta');
                     foreach ($cta_items as $item) {
                         $url_object = $item->getUrl();
+                        $attributes = [];
+                        $attributes['class'] = 'cta-wrapper link-btn';
                         $banner_data['cta'] = [
-                            '#theme'       => 'helperbox_add_cta',
+                            '#theme'       => 'helperbox_component_cta',
                             '#cta_url'     => $url_object->toString(),
                             '#cta_label'   =>  $item->title ?: $url_object->toString(),
                             '#cta_type'    => 'link',
                             '#cta_target'  => null,
                             '#is_external' => false,
                             '#is_no_link'  => FALSE,
-                            '#attributes'  =>  new \Drupal\Core\Template\Attribute([]),
+                            '#attributes'  => new \Drupal\Core\Template\Attribute($attributes),
                             '#wrapper_attributes'     => new \Drupal\Core\Template\Attribute([
                                 'class' => 'cta-link',
                             ])
@@ -571,7 +572,17 @@ class HeroBannerBlock extends BlockBase implements ContainerFactoryPluginInterfa
                 // title and summary
                 $banner_data['title'] = $field_heading ? $field_heading : $banner_data['title'];
                 $banner_data['summary'] = $this->resolveSummaryDescription($block_entity);
-                $banner_data['edit_content'] = '/admin/content/block/' . $content_block_id . '?destination=' . $current_path;
+
+                // Edit btn check 
+                $current_user = \Drupal::currentUser();
+                $banner_data['edit_content'] = NULL;
+                if ($block_entity->access('update', $current_user)) {
+                    $banner_data['edit_content'] = Url::fromRoute(
+                        'entity.block_content.edit_form',
+                        ['block_content' => $content_block_id,],
+                        ['query' => ['destination' => $current_path],]
+                    )->toString();
+                }
             }
 
             // 
@@ -640,10 +651,11 @@ class HeroBannerBlock extends BlockBase implements ContainerFactoryPluginInterfa
             '#entity_type'   => $entity_type,
             '#entity_bundle' => $entity_bundle,
             '#banner_data'   => $banner_data,
-            '#cache'         => [
-                'contexts' => $cache_contexts,
-                'tags'     => $cache_tags,
-            ],
+            // '#cache'         => [
+            //     'contexts' => $cache_contexts,
+            //     'tags'     => $cache_tags,
+            //     'max-age'  => 0,
+            // ],
         ];
     }
 
@@ -871,8 +883,9 @@ class HeroBannerBlock extends BlockBase implements ContainerFactoryPluginInterfa
             if (!empty($description->summary)) {
                 return $description->summary;
             }
-            $plain = strip_tags(\text_summary($description->value, $description->format, $length));
-            return trim(preg_replace('/\s+/', ' ', $plain));
+            $plain = Html::decodeEntities(strip_tags(\check_markup($description->value, $description->format)));
+            $plain = trim(preg_replace('/\s+/u', ' ', $plain));
+            return mb_substr($plain, 0, $length, 'UTF-8');
         }
 
         // Body field.
@@ -881,8 +894,10 @@ class HeroBannerBlock extends BlockBase implements ContainerFactoryPluginInterfa
             if (!empty($body->summary)) {
                 return $body->summary;
             }
-            $plain = strip_tags(\text_summary($body->value, $body->format, $length));
-            return trim(preg_replace('/\s+/', ' ', $plain));
+
+            $plain = Html::decodeEntities(strip_tags(\check_markup($body->value, $body->format)));
+            $plain = trim(preg_replace('/\s+/u', ' ', $plain));
+            return mb_substr($plain, 0, $length, 'UTF-8');
         }
 
         return '';

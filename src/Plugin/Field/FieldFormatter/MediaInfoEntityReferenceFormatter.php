@@ -41,8 +41,11 @@ class MediaInfoEntityReferenceFormatter extends EntityReferenceFormatterBase {
         return [
             'display_option' => 'text',
             'filesize_option' => 'default',
-            'downloadlinklabel' => '',
             'image_style' => '',
+            'cta_settings' => [
+                'cta_label' => '',
+                'cta_target' => '_self',
+            ]
         ] + parent::defaultSettings();
     }
 
@@ -52,7 +55,7 @@ class MediaInfoEntityReferenceFormatter extends EntityReferenceFormatterBase {
     public function settingsForm(array $form, FormStateInterface $form_state) {
         $elements = [];
 
-
+        // Display options
         $elements['display_option'] = [
             '#type' => 'radios',
             '#title' => $this->t('Display media info as:'),
@@ -63,25 +66,60 @@ class MediaInfoEntityReferenceFormatter extends EntityReferenceFormatterBase {
                 'filetype' => $this->t('Show file type'),
                 'filemime' => $this->t('Show file mime'),
                 'fileextension' => $this->t('Show file extension'),
-                'download' => $this->t('Show as download link URL'),
+                'cta' => $this->t('Show as CTA link'),
+                'pdfviewer' => $this->t('Show as PDF viewer'),
                 'filename' => $this->t('Show file name'),
                 'video_embed_url' => $this->t('Show Remote Embed Video URL'),
             ],
             '#required' => true,
         ];
 
-        $elements['downloadlinklabel'] = [
-            '#type' => 'textfield',
-            '#title' => $this->t('Download link label'),
-            '#default_value' => $this->getSetting('downloadlinklabel'),
-            '#description' => $this->t('This text will be used as the link label. If empty, the file name will be used as the label.'),
+        // CTA settings
+        $cta_settings = $this->getSetting('cta_settings');
+        $elements['cta_settings'] = [
+            '#type' => 'details',
+            '#title' => $this->t('CTA Settings'),
+            '#tree' => TRUE,
+            '#open' => TRUE,
             '#states' => [
                 'visible' => [
-                    ':input[name="options[settings][display_option]"]' => ['value' => 'download'],
+                    ':input[name="options[settings][display_option]"]' => [
+                        'value' => 'cta',
+                    ],
                 ],
             ],
         ];
 
+        $elements['cta_settings']['cta_label'] = [
+            '#type' => 'textfield',
+            '#title' => $this->t('CTA Label'),
+            '#default_value' => $cta_settings['cta_label'] ?? '',
+            '#description' => $this->t('This text will be used as the link label. If empty, the file name will be used as the label.'),
+        ];
+
+        $elements['cta_settings']['cta_target'] = [
+            '#type' => 'select',
+            '#title' => $this->t('Target'),
+            '#default_value' => $cta_settings['cta_target'] ?? '_self',
+            '#options' => [
+                '_self' => $this->t('Same window'),
+                '_blank' => $this->t('New window'),
+            ],
+        ];
+
+        $elements['cta_settings']['cta_download'] = [
+            '#type' => 'checkbox',
+            '#title' => $this->t('Force download'),
+            '#default_value' => $cta_settings['cta_download'] ?? FALSE,
+        ];
+
+        $elements['cta_settings']['show_contextual_links'] = [
+            '#type' => 'checkbox',
+            '#title' => $this->t('Show contextual links'),
+            '#default_value' => $cta_settings['show_contextual_links'] ?? FALSE,
+        ];
+
+        // Filesize option
         $elements['filesize_option'] = [
             '#type' => 'radios',
             '#title' => $this->t('File size options:'),
@@ -143,59 +181,177 @@ class MediaInfoEntityReferenceFormatter extends EntityReferenceFormatterBase {
 
         // Handle other display options normally
         foreach ($items as $delta => $item) {
-            $item_id = $item->entity->id();
+            $entity = $item->entity;
+            if (empty($entity)) {
+                continue;
+            }
+            $item_id = $entity->id();
             $media = MediaHelper::get_media_library_info($item_id, $image_style);
             if (!$media) {
                 continue;
             }
-            if ($display_option == 'download') {
+
+            $render_template = '';
+            $markup = '';
+
+            switch ($display_option) {
+                case 'filesize':
+                    $filesizeOption = $settings['filesize_option'] ?? '';
+
+                    switch ($filesizeOption) {
+                        case 'bytes':
+                            $markup = $media[0]['file_size'];
+                            break;
+
+                        case 'kb':
+                            $markup = UtilHelper::bytesToSize($media[0]['file_size'], 'kb');
+                            break;
+
+                        case 'mb':
+                            $markup = UtilHelper::bytesToSize($media[0]['file_size'], 'mb');
+                            break;
+
+                        case 'default':
+                        default:
+                            $markup = $media[0]['file_sizeunit'];
+                            break;
+                    }
+                    break;
+
+                case 'filetype':
+                    $markup = $media[0]['media_type'];
+                    break;
+
+                case 'filemime':
+                    $markup = $media[0]['file_mime'];
+                    break;
+
+                case 'fileextension':
+                    $markup = $media[0]['file_extension'];
+                    break;
+
+                case 'cta':
+                    $cta_info = [];
+                    $cta_info['target_id'] = $entity->id();
+                    $cta_info['entity_reference'] = $entity->getEntityTypeId();
+                    $cta_info['entity_type'] = $entity->bundle();
+
+                    $attributes = [];
+                    $attributes['class'] = 'cta-wrapper link-btn';
+
+                    $cta_settings = $settings['cta_settings'] ?? [];
+                    // 
+                    $source_field = $entity->getSource()->getConfiguration()['source_field'] ?? '';
+                    $description = $entity->get($source_field)->description;
+
+                    // cta label
+                    $cta_Label = $cta_settings['cta_label'] ?? '';
+                    $cta_Label = $cta_Label ?: $description;
+                    $cta_Label = $cta_Label ?: $media[0]['file_name'];
+
+                    // cta link
+                    $cta_link = $media[0]['file_path'];
+
+                    // cta_target
+                    $cta_target = $cta_settings['cta_target'] ?? '';
+                    if ($cta_target) {
+                        $attributes['target'] = $cta_target;
+                    }
+
+                    // cta_download
+                    $cta_download = $cta_settings['cta_download'] ?? '';
+                    if ($cta_download) {
+                        $attributes['download'] = 'download';
+                    }
+
+
+                    // contextual links
+                    $show_contextual_links = $cta_settings['show_contextual_links'] ?? false;
+                    if ($show_contextual_links) {
+                        $links = [];
+                        if ($entity->access('update')) {
+                            $links[] = [
+                                'title' => t('Edit'),
+                                'url' => $entity->toUrl('edit-form', ['query' => ['destination' => \Drupal::service('redirect.destination')->get()]]),
+                            ];
+                        }
+                        if ($entity->access('delete')) {
+                            $links[] = [
+                                'title' => t('Delete'),
+                                'url' => $entity->toUrl('delete-form', ['query' => ['destination' => \Drupal::service('redirect.destination')->get()]])
+                            ];
+                        }
+                        if (!empty($links)) {
+                            $cta_info['contextual_links'] = [
+                                '#theme' => 'links',
+                                '#links' => $links,
+                                '#attributes' => [
+                                    'class' => ['media-contextual-links'],
+                                ],
+                            ];
+                        }
+                    }
+
+                    $render_template = [
+                        '#theme'       => 'helperbox_component_cta',
+                        '#cta_url'     => $cta_link,
+                        '#cta_label'   => $cta_Label,
+                        '#cta_type'    => 'link',
+                        '#cta_target'  => null,
+                        '#is_external' => FALSE,
+                        '#is_no_link'  => FALSE,
+                        '#attributes'  => new \Drupal\Core\Template\Attribute($attributes),
+                        '#wrapper_attributes'  => new \Drupal\Core\Template\Attribute([
+                            'class' => 'media-cta'
+                        ]),
+                        '#cta_info' => $cta_info,
+                    ];
+                    break;
+
+                case 'pdfviewer':
+                    $render_template = [];
+                    foreach ($media as $key => $file) {
+                        if ($file['file_extension'] != 'pdf') {
+                            continue;
+                        }
+                        $render_template[] = [
+                            '#theme'       => 'helperbox_component_pdfviewer',
+                            '#file_data'   => $file,
+                            '#attributes'  => new \Drupal\Core\Template\Attribute(
+                                [
+                                    'id' => 'pdfviewer-media-id-' . $file['entity_id'],
+                                    'media-id' => $file['entity_id']
+                                ]
+                            ),
+                            '#attached' => [
+                                'drupalSettings' => [
+                                    'pdfviewer' => [$file['entity_id'] => $file['file_url']],
+                                ],
+                            ],
+                        ];
+                    }
+
+                    break;
+                case 'filename':
+                    $markup = $media[0]['file_name'];
+                    break;
+
+                case 'video_embed_url':
+                    $markup = $media[0]['remote_embed_video']['embed_url'] ?? '';
+                    break;
+
+                default:
+                    $markup = $media[0]['file_path'];
+                    break;
+            }
+
+            if ($markup) {
                 $elements[$delta] = [
-                    '#markup' => $media[0]['file_path'],
+                    '#markup' => $markup,
                 ];
-            } else if ($display_option == 'filesize') {
-                $filesize_option =  $settings['filesize_option'] ?? '';
-                if ($filesize_option == 'default') {
-                    $filesize =  $media[0]['file_sizeunit'];
-                } else  if ($filesize_option == 'bytes') {
-                    $filesize =  $media[0]['file_size'];
-                } else  if ($filesize_option == 'kb') {
-                    $filesize = UtilHelper::bytesToSize($media[0]['file_size'], 'kb');
-                } else  if ($filesize_option == 'mb') {
-                    $filesize = UtilHelper::bytesToSize($media[0]['file_size'], 'mb');
-                }
-                $elements[$delta] = [
-                    '#markup' => $filesize,
-                ];
-            } else if ($display_option == 'filetype') {
-                $elements[$delta] = [
-                    '#markup' => $media[0]['media_type'],
-                ];
-            } else if ($display_option == 'filemime') {
-                $elements[$delta] = [
-                    '#markup' => $media[0]['file_mime'],
-                ];
-            } else if ($display_option == 'fileextension') {
-                $elements[$delta] = [
-                    '#markup' => $media[0]['file_extension'],
-                ];
-            } else if ($display_option == 'download') {
-                $downloadlinklabel =  $settings['downloadlinklabel'] ?? '';
-                $downloadlinklabel = $downloadlinklabel ? $downloadlinklabel : $media[0]['file_name'];
-                $elements[$delta] = [
-                    '#markup' => "<a href='" . $media[0]['file_path'] . "' download>$downloadlinklabel . $langcode</a>",
-                ];
-            } else if ($display_option == 'filename') {
-                $elements[$delta] = [
-                    '#markup' => $media[0]['file_name'],
-                ];
-            } else if ($display_option == 'video_embed_url') {
-                $elements[$delta] = [
-                    '#markup' => $media[0]['remote_embed_video']['embed_url'] ?? '',
-                ];
-            } else {
-                $elements[$delta] = [
-                    '#markup' => $media[0]['file_path'],
-                ];
+            }
+            if ($render_template) {
+                $elements[$delta] = $render_template;
             }
         }
 

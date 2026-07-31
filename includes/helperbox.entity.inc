@@ -21,7 +21,7 @@ function helperbox_entity_presave(\Drupal\Core\Entity\EntityInterface $entity) {
     //  check for media entity
     if ($entity->getEntityTypeId() == 'media') {
         // check setting
-        $enable_media_custom_thumbnail = HelperboxSettings::get_config('enable_media_custom_thumbnail');
+        $enable_media_custom_thumbnail = HelperboxSettings::get_instance()->get_config('enable_media_custom_thumbnail');
         if ($enable_media_custom_thumbnail) {
             if ($entity->hasField('field_custom_thumbnail') && !$entity->get('field_custom_thumbnail')->isEmpty()) {
                 $custom_thumbnail = $entity->field_custom_thumbnail->entity;
@@ -30,7 +30,7 @@ function helperbox_entity_presave(\Drupal\Core\Entity\EntityInterface $entity) {
                     if ($thumbnail_info) {
                         // Force update thumbnail
                         $entity->set('thumbnail', [
-                            'target_id' => $thumbnail_info['fid'],
+                            'target_id' => $thumbnail_info['file_id'],
                             'alt'       => $thumbnail_info['alt_text'],
                             'title'     => $thumbnail_info['title_text'],
                         ]);

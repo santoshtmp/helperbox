@@ -12,9 +12,111 @@ use Drupal\node\NodeInterface;
  * Custom class to handle Partials Content
  * PartialsContent
  * version 1.0.0
- * time 2025110500
+ * time 2026070400
  */
 class PartialsContent {
+
+
+    /**
+     * Gets the designation information for a team.
+     *
+     * @param \Drupal\node\NodeInterface|int $team
+     *   The team node entity or the team node ID.
+     *
+     * @return array|null
+     *   An associative array containing the designation data, or NULL if the team
+     *   is invalid, unpublished, or the required fields are empty.
+     */
+    public static function getTeamCategoryDesignation($team, $category_id = 0) {
+        // If an ID was passed, load the node.
+        if (is_numeric($team)) {
+            // $team = \Drupal::entityTypeManager()
+            //     ->getStorage('node')
+            //     ->loadByProperties([
+            //         'type' => 'team',
+            //         'status' => 1,
+            //         'nid' => $team
+            //     ]);
+
+            /** @var \Drupal\node\NodeInterface|null $team */
+            $team = \Drupal::entityTypeManager()
+                ->getStorage('node')
+                ->load($team);
+        }
+        if (!$team || !$team instanceof NodeInterface || $team->bundle() !== 'team' || !$team->isPublished()) {
+            return NULL;
+        }
+
+        $field_data = [];
+
+        if ($team->hasField('field_designation') && !$team->get('field_designation')->isEmpty()) {
+            $field_data['field_designation'] = $team->get('field_designation')->value;
+        }
+
+        $field_designation_by_category = false;
+        if ($team->hasField('field_designation_by_category') && !$team->get('field_designation_by_category')->isEmpty()) {
+            $field_designation_by_category = $team->get('field_designation_by_category')->value;
+        }
+        $field_data['field_designation_by_category'] = $field_designation_by_category;
+        
+        if ($team->hasField('field_team_category') && !$team->get('field_team_category')->isEmpty()) {
+            $field_team_category = $team->get('field_team_category');
+            /** @var \Drupal\Core\Field\EntityReferenceFieldItemList $field_team_category */
+            foreach ($field_team_category->referencedEntities() as $term) {
+                if (!$term instanceof \Drupal\taxonomy\TermInterface) {
+                    continue;
+                }
+                $field_data['field_team_category'][] = [
+                    'type'      => $term->getEntityTypeId(),
+                    'bundle'    => $term->bundle(),
+                    'id'        => $term->id(),
+                    'label'     => $term->label(),
+                    'url'       => $term->toUrl()->tostring(),
+                ];
+            }
+        }
+
+        if ($team->hasField('field_team_category_designation') && !$team->get('field_team_category_designation')->isEmpty()) {
+            $field_team_category_designation = $team->get('field_team_category_designation');
+            foreach ($field_team_category_designation->referencedEntities() as $paragraph) {
+                if (!$paragraph instanceof \Drupal\paragraphs\ParagraphInterface) {
+                    continue;
+                }
+                $paragraph_data = [
+                    'type' => $paragraph->getEntityTypeId(),
+                    'bundle' => $paragraph->bundle(),
+                    'id' => $paragraph->id(),
+                ];
+
+                if ($paragraph->hasField('field_team_category') && !$paragraph->get('field_team_category')->isEmpty()) {
+                    $term = $paragraph->get('field_team_category')->entity;
+                    if ($term) {
+                        if ($category_id && ($category_id != $term->id())) {
+                            continue;
+                        }
+                        $paragraph_data['field_team_category'] = [
+                            'type'      => $term->getEntityTypeId(),
+                            'bundle'    => $term->bundle(),
+                            'id'        => $term->id(),
+                            'label'     => $term->label(),
+                            'url'       => $term->toUrl()->tostring(),
+                        ];
+                    }
+                }
+                if ($paragraph->hasField('field_designation') && !$paragraph->get('field_designation')->isEmpty()) {
+                    $paragraph_data['field_designation'] = $paragraph->get('field_designation')->value;
+                }
+
+                $field_data['field_team_category_designation'][] = $paragraph_data;
+            }
+        }
+
+        if ($team->hasField('field_additional_role') && !$team->get('field_additional_role')->isEmpty()) {
+            $field_data['field_additional_role'] = $team->get('field_additional_role')->value;
+        }
+
+        return $field_data;
+    }
 
 
     /**

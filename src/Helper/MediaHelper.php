@@ -25,7 +25,7 @@ class MediaHelper {
      *
      * @param \Drupal\Core\Entity\Display\EntityViewDisplayInterface $display
      *   The entity view display configuration.
-     * @param string $field_name
+     * @param string $source_field
      *   The machine name of the field to check.
      * @param bool $all_settings
      *   If TRUE, returns all component settings instead of just the image style.
@@ -34,11 +34,11 @@ class MediaHelper {
      *   The image style machine name, all settings array if $all_settings is TRUE,
      *   or an empty string if not configured.
      */
-    public static function get_component_image_style($display, $field_name, $all_settings = FALSE) {
+    public static function get_component_image_style($display, $source_field, $all_settings = FALSE) {
         try {
             if ($display) {
                 // Get the field component settings
-                $component = $display->getComponent($field_name);
+                $component = $display->getComponent($source_field);
                 if ($all_settings) {
                     return $component['settings'];
                 }
@@ -64,28 +64,31 @@ class MediaHelper {
      * @return string
      *   The field machine name for the media source.
      */
-    public static function get_media_field_name($media_type) {
-        $field_name = 'field_media_file';
+    public static function get_media_source_field_name($media_entity, $media_type = '') {
+        if (empty($media_type)) {
+            $media_type = $media_entity->bundle() ?? '';
+        }
+        $source_field = '';
         switch ($media_type) {
             case 'image':
-                $field_name = 'field_media_image';
+                $source_field = 'field_media_image';
                 break;
             case 'video':
-                $field_name = 'field_media_video_file';
+                $source_field = 'field_media_video_file';
                 break;
             case 'audio':
-                $field_name = 'field_media_audio_file';
+                $source_field = 'field_media_audio_file';
                 break;
             case 'remote_video':
-                $field_name = 'field_media_oembed_video';
+                $source_field = 'field_media_oembed_video';
                 break;
             case 'document':
-                $field_name = 'field_media_document';
+                $source_field = 'field_media_document';
                 break;
             default:
-                $field_name = 'field_media_file';
+                $source_field = $media_entity->getSource()->getConfiguration()['source_field'] ?? '';
         }
-        return $field_name;
+        return $source_field;
     }
 
     /**
@@ -99,8 +102,6 @@ class MediaHelper {
      *   A single media ID, comma-separated string of IDs, or an array of IDs.
      * @param string $image_style
      *   Optional image style machine name to apply to image media.
-     * @param string $image_loading
-     *   Optional loading attribute value (e.g., 'lazy', 'eager').
      * @param bool $get_thumbnail
      *   If TRUE, attempts to retrieve thumbnail information for the media.
      *
@@ -119,7 +120,6 @@ class MediaHelper {
      *   - created_time: formatted creation timestamp.
      *   - thumbnail: Thumbnail URL or array.
      *   - image_style: Applied image style machine name.
-     *   - image_loading: Loading attribute value.
      *   - alt_text: Alt text for the media.
      *   - title_text: Title text for the media.
      *   - render_embed_html: Rendered embed HTML (for remote videos).
@@ -128,7 +128,7 @@ class MediaHelper {
      * @throws \Drupal\Component\Plugin\Exception\InvalidPluginDefinitionException
      * @throws \Drupal\Component\Plugin\Exception\PluginNotFoundException
      */
-    public static function get_media_library_info($media_ids, $image_style = '', $image_loading = '', $get_thumbnail = FALSE) {
+    public static function get_media_library_info($media_ids, $image_style = '', $get_thumbnail = FALSE) {
         $media_infos = [];
         try {
 
@@ -138,40 +138,54 @@ class MediaHelper {
 
             foreach ($media_ids as $key => $media_id) {
                 if ($media_id) {
-                    $media = Media::load($media_id);
-                    if ($media) {
-                        $media_type = $media->bundle();
-                        $field_name = self::get_media_field_name($media_type);
-                        if ($media && $media->hasField($field_name) && !$media->get($field_name)->isEmpty()) {
-                            $media_entity = $media->get($field_name)->entity;
+                    $media_entity = Media::load($media_id);
+                    if ($media_entity) {
+                        $media_type = $media_entity->bundle();
+                        $source_field = self::get_media_source_field_name($media_entity, $media_type);
+                        // $source_field = $media_entity->getSource()->getConfiguration()['source_field'] ?? '';
+                        if ($media_entity && $media_entity->hasField($source_field) && !$media_entity->get($source_field)->isEmpty()) {
+                            $media_source_entity = $media_entity->get($source_field)->entity;
 
                             $media_info = [];
+                            $media_info['entity_reference'] = $media_entity->getEntityTypeId();
+                            $media_info['entity_id'] = $media_entity->id();
                             $media_info['media_type'] = $media_type;
-                            $media_info['mid'] = $media_id;
-                            if ($media_entity instanceof File) {
-                                $file_url = \Drupal::service('file_url_generator')->generateAbsoluteString($media_entity->getFileUri());
-                                $file_path = \Drupal::service('file_url_generator')->generateString($media_entity->getFileUri());
+                            $media_info['media_source_field'] = $source_field;
+                            $media_info['entity_label'] = $media_entity->label();
+
+                            if ($media_type == 'document') {
+                                $media_info['description'] = $media_entity->get($source_field)->description ?? '';
+                            }
+
+                            if ($media_type == 'image') {
+                                $media_info['alt_text'] = $media_entity->$source_field->alt ?? '';
+                                $media_info['title_text'] = $media_entity->$source_field->title ?? '';
+                            }
+
+                            $fileUrlGenerator = \Drupal::service('file_url_generator');
+                            if ($media_source_entity instanceof File) {
+                                $file_uri = $media_source_entity->getFileUri();
+                                $file_url = $fileUrlGenerator->generateAbsoluteString($file_uri);
+                                $file_path = $fileUrlGenerator->generateString($file_uri);
 
                                 if ($image_style && $media_type == 'image') {
-                                    $image_uri = $media->get('field_media_image')->entity->uri->value;
-                                    $file_url = ImageStyle::load($image_style)->buildUrl($image_uri);
-                                    $file_url = ImageStyle::load($image_style)->buildUrl($image_uri);
-                                    $file_path = \Drupal::service('file_url_generator')->generateString($file_url);
+                                    $file_url = ImageStyle::load($image_style)->buildUrl($file_uri);
+                                    $file_path = $fileUrlGenerator->generateString($file_url);
+                                    $media_info['image_style'] = $image_style;
                                 }
 
-                                $thumbnail_url = '';
                                 if ($get_thumbnail) {
-                                    if ($media->hasField('field_thumbnail') && !$media->get('field_thumbnail')->isEmpty()) {
+                                    if ($media_source_entity->hasField('field_thumbnail') && !$media_source_entity->get('field_thumbnail')->isEmpty()) {
                                         $thumbnail_id = [];
-                                        foreach ($media->get('field_thumbnail')->getValue() as $item) {
+                                        foreach ($media_source_entity->get('field_thumbnail')->getValue() as $item) {
                                             $thumbnail_id[] = $item['target_id'];
                                         }
                                         if ($thumbnail_id) {
-                                            $thumbnail_url = self::get_media_library_info($thumbnail_id);
+                                            $media_info['thumbnail'] = self::get_media_library_info($thumbnail_id);
                                         }
                                     } else {
                                         // Try to get the default image set in field settings
-                                        $field_thumbnail = $media->getFieldDefinition('field_thumbnail');
+                                        $field_thumbnail = $media_source_entity->getFieldDefinition('field_thumbnail');
                                         if ($field_thumbnail) {
                                             $default_value = $field_thumbnail->getDefaultValueLiteral();
                                             $uuid = isset($default_value[0]['target_uuid']) ? $default_value[0]['target_uuid'] : '';
@@ -182,44 +196,42 @@ class MediaHelper {
                                             if (!empty($entity_media_uuid)) {
                                                 /** @var \Drupal\media\Entity\Media $media_thumbnail */
                                                 $media_thumbnail = reset($entity_media_uuid);
-                                                $thumbnail_url = self::get_media_library_info($media_thumbnail->id());
+                                                $media_info['thumbnail'] = self::get_media_library_info($media_thumbnail->id());
                                             }
                                         }
                                     }
                                 }
                                 //
-                                $media_info['fid'] = $media_entity->id();
+
+                                $media_info['file_id'] = $media_source_entity->id();
+                                $media_info['file_uri'] = $file_uri;
                                 $media_info['file_url'] = $file_url;
                                 $media_info['file_path'] = $file_path;
-                                $media_info['file_name'] = $media_entity->getFilename();
-                                $media_info['file_size'] = $media_entity->getSize();
-                                $media_info['file_sizeunit'] = UtilHelper::bytesToSize($media_entity->getSize());
-                                $media_info['file_mime'] = $media_entity->getMimeType();
-                                $media_info['file_extension'] = pathinfo($media_entity->getFilename(), PATHINFO_EXTENSION);
-                                $media_info['created_time'] = \Drupal::service('date.formatter')->format($media_entity->getCreatedTime(), 'custom', 'Y-m-d H:i:s');
-                                $media_info['thumbnail'] = $thumbnail_url;
-                                $media_info['image_style'] = $image_style;
-                                $media_info['image_loading'] = $image_loading;
-                                $media_info['alt_text'] = $media->$field_name->alt ?? $media_entity->label();
-                                $media_info['title_text'] = $media->$field_name->title ?? $media_entity->label();
+                                $media_info['file_name'] = $media_source_entity->getFilename();
+                                $media_info['file_size'] = $media_source_entity->getSize();
+                                $media_info['file_sizeunit'] = UtilHelper::bytesToSize($media_source_entity->getSize());
+                                $media_info['file_mime'] = $media_source_entity->getMimeType();
+                                $media_info['file_extension'] = pathinfo($media_source_entity->getFilename(), PATHINFO_EXTENSION);
+                                $media_info['created_time'] = \Drupal::service('date.formatter')->format($media_source_entity->getCreatedTime(), 'custom', 'Y-m-d H:i:s');
                             } else if ($media_type === 'remote_video') {
                                 //
-                                $oembed_url = $media->get($field_name)->value;
-                                $embed_html = $media->get($field_name)->view(['type' => 'oembed', 'label' => 'hidden']);
+                                $oembed_url = $media_source_entity->get($source_field)->value;
+                                $embed_html = $media_source_entity->get($source_field)->view(['type' => 'oembed', 'label' => 'hidden']);
                                 $thumbnail = [];
-                                if ($media->hasField('thumbnail') && !$media->get('thumbnail')->isEmpty()) {
-                                    $thumbnail_entity = $media->get('thumbnail')->entity;
-                                    $thumbnail['file_url'] = \Drupal::service('file_url_generator')->generateAbsoluteString($thumbnail_entity->getFileUri());
-                                    $thumbnail['file_path'] = \Drupal::service('file_url_generator')->generateString($thumbnail_entity->getFileUri());
+                                if ($media_source_entity->hasField('thumbnail') && !$media_source_entity->get('thumbnail')->isEmpty()) {
+                                    $thumbnail_entity = $media_source_entity->get('thumbnail')->entity;
+                                    $thumbnail['file_url'] = $fileUrlGenerator->generateAbsoluteString($thumbnail_entity->getFileUri());
+                                    $thumbnail['file_path'] = $fileUrlGenerator->generateString($thumbnail_entity->getFileUri());
                                     $thumbnail['file_name'] =  $thumbnail_entity->getFilename();
                                 }
-                                $remote_embed_video = self::get_remote_embed_video($media_id);
                                 //
                                 $media_info['file_url'] = $media_info['file_path'] = $oembed_url;
-                                $media_info['file_name'] = $media->label();
+                                $media_info['file_name'] = $media_source_entity->label();
                                 $media_info['render_embed_html'] = \Drupal::service('renderer')->renderPlain($embed_html);
-                                $media_info['remote_embed_video'] = $remote_embed_video;
-                                $media_info['thumbnail'] =  $thumbnail;
+                                $media_info['remote_embed_video'] = self::get_remote_embed_video($media_id);
+                                if (!empty($thumbnail)) {
+                                    $media_info['thumbnail'] =  $thumbnail;
+                                }
                                 //
                             }
                             // other media info can be added here as needed
@@ -273,14 +285,14 @@ class MediaHelper {
      */
     public static function get_remote_embed_video($media_id) {
         try {
-            $media = Media::load($media_id);
+            $media_entity = Media::load($media_id);
 
-            if (!$media || $media->bundle() !== 'remote_video') {
+            if (!$media_entity || $media_entity->bundle() !== 'remote_video') {
                 return null;
             }
 
-            $field_name = self::get_media_field_name('remote_video');
-            $url = $media->get($field_name)->value;
+            $source_field = self::get_media_source_field_name($media_entity, 'remote_video');
+            $url = $media_entity->get($source_field)->value;
 
             if (!$url) {
                 return null;
@@ -361,5 +373,4 @@ class MediaHelper {
             //throw $th;
         }
     }
-
 }

@@ -151,6 +151,11 @@ class MenuHelper {
                 break;
             }
 
+            // Skip inaccessible menu items.
+            if (!$element->access instanceof \Drupal\Core\Access\AccessResultInterface || !$element->access->isAllowed()) {
+                continue;
+            }
+
             /** @var \Drupal\Core\Menu\MenuLinkTreeElement $element */
             $link = $element->link;
             $subtree = $element->subtree;

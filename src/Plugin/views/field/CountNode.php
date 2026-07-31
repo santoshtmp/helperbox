@@ -10,9 +10,9 @@ use Drupal\helperbox\Helper\UtilHelper;
 
 /**
  *
- * A handler to provide for helperbox_count_node.
+ * A handler to provide for helperbox_views_field_countnode.
  * */
-#[ViewsField("helperbox_count_node")]
+#[ViewsField("helperbox_views_field_countnode")]
 class CountNode extends FieldPluginBase {
 
     /**

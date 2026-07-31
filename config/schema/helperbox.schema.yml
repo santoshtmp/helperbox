@@ -11,6 +11,11 @@ helperbox.settings:
     enable_unique_node_per_bundle:
       type: boolean
       label: "Enable unique node/item per content bundle"
+    unique_node_content_type:
+      type: sequence
+      label: "Content types for unique node/item title"
+      sequence:
+        type: string
     enable_only_alies_login_url:
       type: boolean
       label: "Enable Only Aliases Login URL"
@@ -241,122 +246,6 @@ block.settings.helperbox_banner_block:
       type: integer
       label: "Lottie file"
 
-block.settings.helperbox_contact_block:
-  type: block_settings
-  label: "Helperbox Contact Block settings"
-  mapping:
-    block_layout:
-      type: string
-      label: "Block layout"
-    section_title:
-      type: string
-      label: "Section title"
-    section_body:
-      type: mapping
-      mapping:
-        value:
-          type: text
-          label: "Section body value"
-        format:
-          type: string
-          label: "Section body format"
-    defult_social_links:
-      type: boolean
-      label: "Default social links"
-    defult_contact_info:
-      type: boolean
-      label: "Default contact info"
-    contact_info_fieldset:
-      type: mapping
-      mapping:
-        address:
-          type: string
-          label: "Address"
-        phone_number:
-          type: string
-          label: "Phone number"
-        email:
-          type: string
-          label: "Email"
-    selected_webform:
-      type: string
-      label: "Selected webform"
-    feature_image:
-      type: integer
-      label: "Feature image"
-    find_us_title:
-      type: string
-      label: "Find us title"
-    contact_us_title:
-      type: string
-      label: "Contact us title"
-    social_links:
-      type: sequence
-      label: "Social links"
-      sequence:
-        type: mapping
-        mapping:
-          social_type:
-            type: string
-            label: "Social type"
-          url:
-            type: string
-            label: "URL"
-          weight:
-            type: integer
-            label: "Weight"
-
-block.settings.helperbox_content_type_block:
-  type: block_settings
-  label: "Helperbox Content Type Block settings"
-  mapping:
-    section_title:
-      type: string
-      label: "Section title"
-    section_sub_title:
-      type: string
-      label: "Section sub title"
-    block_layout:
-      type: string
-      label: "Block layout"
-    show_edit_btn:
-      type: boolean
-      label: "Show edit button"
-    custom_content_node:
-      type: mapping
-      mapping:
-        enable:
-          type: boolean
-          label: "Enable custom content node"
-        select_node:
-          type: string
-          label: "Select node"
-    node_view_label:
-      type: string
-      label: "Node view label"
-    view_all_cta:
-      type: sequence
-      label: "View all CTA"
-      sequence:
-        type: mapping
-        mapping:
-          label:
-            type: string
-            label: "Label"
-            translatable: true
-          url:
-            type: string
-            label: "URL"
-    other_meta_info:
-      type: mapping
-      mapping:
-        background_image:
-          type: integer
-          label: "Background image"
-        background_image_style:
-          type: string
-          label: "Background image style"
-
 views.field.helperbox_renderblock:
   type: views_field
   label: "Helperbox Render Block field"
@@ -382,7 +271,7 @@ views.field.helperbox_custom_text:
       type: string
       label: "Custom text content"
 
-views.field.helperbox_add_media:
+views.field.helperbox_views_field_addmedia:
   type: views_field
   label: "Helperbox Add Media field"
   mapping:
@@ -396,7 +285,7 @@ views.field.helperbox_add_media:
       type: string
       label: "Media ID"
 
-views.field.helperbox_add_cta:
+views.field.helperbox_views_field_cta:
   type: views_field
   label: "Helperbox Add CTA field"
   mapping:
@@ -426,7 +315,7 @@ views.field.helperbox_add_cta:
       type: string
       label: "Query parameters"
 
-views.field.helperbox_count_node:
+views.field.helperbox_views_field_countnode:
   type: views_field
   label: "Helperbox Count Node field"
   mapping:
@@ -457,6 +346,14 @@ views.field.helperbox_count_node:
           custom_value:
             type: string
             label: "Custom value"
+
+views.field.helperbox_views_field_customfunction:
+  type: views_field
+  label: "Custom function field"
+  mapping:
+    customfunction:
+      type: string
+      label: "Custom function"
 
 views.area.helperbox_renderblock:
   type: views_area
@@ -540,13 +437,26 @@ field.formatter.settings.helperbox_fieldformat_mediainfo:
     filesize_option:
       type: string
       label: "Filesize option"
-    downloadlinklabel:
-      type: string
-      label: "Download link label"
-      translatable: true
     image_style:
       type: string
       label: "Image style"
+    cta_settings:
+      type: mapping
+      label: "CTA settings"
+      mapping:
+        cta_label:
+          type: label
+          label: "CTA label"
+          translatable: true
+        cta_target:
+          type: string
+          label: "CTA target"
+        cta_class:
+          type: string
+          label: "CTA CSS class"
+        cta_download:
+          type: boolean
+          label: "Force download"
 
 field.formatter.settings.helperbox_fieldformat_tel_phone_number:
   type: mapping

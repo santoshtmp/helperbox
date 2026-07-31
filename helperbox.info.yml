@@ -2,7 +2,7 @@ name: "HelperBox"
 type: module
 description: "Provides a collection of helper utilities including custom blocks, views helpers, field formatters, theme suggestions, preprocess hooks and API tools."
 core_version_requirement: ^11
-package: Custom
+package: HelperBox
 version: 11+
 configure: helperbox.settings
 dependencies:

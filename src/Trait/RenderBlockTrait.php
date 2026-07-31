@@ -200,7 +200,7 @@ trait RenderBlockTrait {
             '#block_plugin_id' => $block_plugin_id,
             '#adminlinks'      => $adminlinks,
             '#attributes'      => [
-                'id'        => 'block-'.$dataView,
+                'id'        => 'block-' . $dataView,
                 'class'     => array_filter([
                     'field-render-content',
                     'innerblock-wrapper',
@@ -210,10 +210,11 @@ trait RenderBlockTrait {
                 'data-view' => $dataView,
             ],
             '#attached' => $attached,
-            '#cache'    => [
-                'tags'     => Cache::mergeTags($cache_tags, ['rendered']),
-                'contexts' => ['user.permissions'],
-            ],
+            // '#cache'    => [
+            // 'tags'     => Cache::mergeTags($cache_tags, ['rendered']),
+            // 'contexts' => ['user.permissions'],
+            // 'max-age'  => 0,
+            // ],
         ];
     }
 }

@@ -27,10 +27,11 @@ class SearchForm extends FormBase {
             '#title' => $this->t('Search'),
             '#title_display' => 'invisible',
             '#default_value' => $search,
-            '#placeholder' => $this->t('Search'),
+            // '#placeholder' => $this->t('Search'),
             '#attributes' => [
                 'class' => ['helperbox-search-input'],
             ],
+            // '#autocomplete_route_name' => 'helperbox.search_entity',
         ];
 
         $form['actions'] = [

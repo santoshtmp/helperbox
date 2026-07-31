@@ -89,16 +89,20 @@ class LinkCTAFormatter extends FormatterBase {
             if (!$target && $is_external) {
                 $target = '_blank';
             }
+            $attributes = [];
+            $attributes['class'] = 'cta-wrapper ' . $cta_type . '-btn';
 
             $elements[$delta] = [
-                '#theme'       => 'helperbox_add_cta',
+                '#theme'       => 'helperbox_component_cta',
                 '#cta_url'     => $url->toString(),
                 '#cta_label'   => $item->title ?? $url->toString(),
                 '#cta_type'    => $cta_type,
                 '#cta_target'  => $target,
                 '#is_external' => $is_external,
                 '#is_no_link'  => FALSE,
-                '#attributes'  => new \Drupal\Core\Template\Attribute([]),
+                '#attributes'  => new \Drupal\Core\Template\Attribute($attributes),
+                '#wrapper_attributes'  => new \Drupal\Core\Template\Attribute([]),
+                '#cta_info' => [],
             ];
         }
 

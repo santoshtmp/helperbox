@@ -14,32 +14,45 @@ use Drupal\taxonomy\Entity\Term;
 class UtilHelper {
 
     /**
-     * Logs exceptions with backtrace to a secure file.
+     * Logs an exception using Drupal's logger.
      *
-     * @param \Throwable $throwable
+     * Logs the exception along with the file and line from which this helper was
+     * called.
+     *
+     * @param \Throwable $th
      *   The exception or error to log.
      *
      * @return void
+     *   This method does not return a value.
      */
     public static function helperbox_error_log($th) {
-        // Define the log file path
-        $log_file = \Drupal::root() . '/sites/default/files/helperbox_error_log.txt';
-        // Get the backtrace to find the original file where the error occurred
-        $backtrace = debug_backtrace();
-        $initial_error_file = isset($backtrace[1]['file']) ? $backtrace[1]['file'] : '';
-        $initial_error_line = isset($backtrace[1]['line']) ? $backtrace[1]['line'] : '';
-        // Format the log message
-        $log_message = "[" . date("Y-m-d H:i:s") . "] ERROR: " . $th->getMessage() . " in " . $th->getFile() . " on line " . $th->getLine();
+        // Get the backtrace to find the original caller.
+        $backtrace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 2);
+        $initial_error_file = $backtrace[1]['file'] ?? '';
+        $initial_error_line = $backtrace[1]['line'] ?? '';
+
+        $context = [
+            '@message' => $th->getMessage(),
+            '@file' => $th->getFile(),
+            '@line' => $th->getLine(),
+            '@initial_file' => $initial_error_file,
+            '@initial_line' => $initial_error_line,
+        ];
+
         if ($initial_error_file && $initial_error_line) {
-            $log_message .= " | Initial Error File: " . $initial_error_file . " on line " . $initial_error_line . PHP_EOL;
+            \Drupal::logger('helperbox')->error(
+                '@message in @file on line @line | Called from @initial_file on line @initial_line',
+                $context
+            );
         } else {
-            $log_message .=  PHP_EOL;
+            \Drupal::logger('helperbox')->error(
+                '@message in @file on line @line',
+                $context
+            );
         }
-        // Ensure the log file is writable
-        if (is_writable(dirname($log_file))) {
-            error_log($log_message, 3, $log_file);
-        }
-        \Drupal::messenger()->addMessage(json_encode($log_message), 'helperbox_error_message');
+
+        // Optional: Show a message to the current user.
+        \Drupal::messenger()->addError(t('An unexpected error occurred. Please contact the administrator.'));
     }
 
     /**

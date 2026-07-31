@@ -69,7 +69,10 @@ class ContentDataImportForm extends FormBase {
                 'news' => 'News',
                 'events' => 'Events',
                 'journal' => 'Journals',
-                'notices' => 'Notices'
+                'notices' => 'Notices',
+                'resoures' => 'Resources',
+                'people' => 'Team/People',
+                'nasc_discussion' => 'Update Event nasc_discussion'
             ],
             '#empty_option' => $this->t('- Select -'),
             '#states' => [
@@ -89,6 +92,8 @@ class ContentDataImportForm extends FormBase {
                 'suchi_darta' => 'Suchi Darta',
                 'journal_stage' => 'Journal stage/status',
                 'notices_type' => 'Notices type/category',
+                'resources_type' => 'Resources type/category',
+                'people_type' => 'Team/People type/category',
             ],
             '#empty_option' => $this->t('- Select -'),
             '#states' => [

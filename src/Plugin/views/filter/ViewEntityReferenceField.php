@@ -156,6 +156,27 @@ class ViewEntityReferenceField extends FilterPluginBase {
 
     /**
      * {@inheritdoc}
+     * 
+     * FIX: Override this to prevent the base class from rendering an empty 
+     * <div class="views-left-30"></div> which breaks the Views UI modal layout.
+     */
+    public function showOperatorForm(&$form, FormStateInterface $form_state) {
+        // Do nothing. We have no operators, so we don't want the left column wrapper.
+    }
+
+    /**
+     * {@inheritdoc}
+     * 
+     * FIX: Override this to prevent wrapping the value form in 'views-right-70'.
+     * Since we removed the left column, the value form should take 100% width.
+     */
+    protected function showValueForm(&$form, FormStateInterface $form_state) {
+        $this->valueForm($form, $form_state);
+        // We intentionally do NOT add the 'views-right-70' wrapper here.
+    }
+
+    /**
+     * {@inheritdoc}
      */
     public function valueForm(&$form, FormStateInterface $form_state) {
         parent::valueForm($form, $form_state);

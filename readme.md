@@ -109,11 +109,11 @@ helperbox/
 - Custom theme implementations for various components
 
 ### 2. Custom Views Fields
-- **Node Counter (`helperbox_count_node`)**: Counts nodes based on content type and conditions
+- **Node Counter (`helperbox_views_field_countnode`)**: Counts nodes based on content type and conditions
 - **Block Renderer (`helperbox_renderblock`)**: Renders blocks and views blocks within Views
 - **Custom HTML Text (`helperbox_custom_text`)**: Displays full HTML content with token support
-- **Media Adder (`helperbox_add_media`)**: Adds media to views with advanced options
-- **CTA Button (`helperbox_add_cta`)**: Configurable call-to-action buttons with support for:
+- **Media Adder (`helperbox_views_field_addmedia`)**: Adds media to views with advanced options
+- **CTA Button (`helperbox_views_field_cta`)**: Configurable call-to-action buttons with support for:
   - Internal paths, external URLs, and entity references
   - Primary/secondary button styles
   - Dynamic query parameters with placeholders
@@ -133,8 +133,6 @@ helperbox/
 
 ### 5. Custom Blocks
 - **Banner Block (`helperbox_banner_block`)**: Feature-rich banner with multiple layout options, media support, CTAs, and highlights
-- **Contact Block (`helperbox_contact_block`)**: Contact information with social links, webforms, and media
-- **Content Block (`helperbox_content_type_block`)**: Dynamic content display with view options
 - **Menu Block (`helperbox_menu_block`)**: Custom menu rendering with social links
 - **Repeated Content Block (`helperbox_repeated_content_block`)**: Reusable content sections
 
@@ -350,7 +348,7 @@ drush config-import -y
 ## Changelog
 
 ### Version 11.3.1
-- Added `helperbox_add_cta` Views field plugin
+- Added `helperbox_views_field_cta` Views field plugin
 - Updated schema definitions for all Views fields
 - Improved CTA button with dynamic query parameters
 - Added entity autocomplete for CTA links

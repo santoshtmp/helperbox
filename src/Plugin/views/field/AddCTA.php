@@ -37,7 +37,7 @@ use Drupal\helperbox\Trait\FieldCTATrait;
  *
  * @ingroup views_field_handlers
  */
-#[ViewsField("helperbox_add_cta")]
+#[ViewsField("helperbox_views_field_cta")]
 class AddCTA extends FieldPluginBase {
 
   use FieldCTATrait;
@@ -473,7 +473,7 @@ class AddCTA extends FieldPluginBase {
    * @return array
    *   A render array with one of the following structures:
    *   - Empty array [] if no content should be rendered
-   *   - ['#theme' => 'helperbox_add_cta', ...] for template rendering
+   *   - ['#theme' => 'helperbox_component_cta', ...] for template rendering
    *
    * @see \Drupal\Core\Render\Element\Link
    * @see helperbox-add-cta.html.twig
@@ -513,16 +513,20 @@ class AddCTA extends FieldPluginBase {
 
     // <nolink> / <button> — render text without a hyperlink.
     if ($is_no_link) {
+      $attributes = [];
+      $attributes['class'] = 'cta-wrapper ' . $cta_type . '-btn';
       return [
-        '#theme'       => 'helperbox_add_cta',
+        '#theme'       => 'helperbox_component_cta',
         '#cta_url'     => '',
         '#cta_label'   => (string) $cta_label,
         '#cta_type'    => $cta_type,
         '#cta_target'  => '',
-        '#attributes'  => new \Drupal\Core\Template\Attribute([]),
+        '#attributes'  => new \Drupal\Core\Template\Attribute($attributes),
+        '#wrapper_attributes'  => new \Drupal\Core\Template\Attribute([]),
         '#url_type'    => $url_type,
         '#is_external' => FALSE,
         '#is_no_link'  => TRUE,
+        '#cta_info' => [],
       ];
     }
 
@@ -547,16 +551,21 @@ class AddCTA extends FieldPluginBase {
       }
     }
 
+    $attributes = [];
+    $attributes['class'] = 'cta-wrapper ' . $cta_type . '-btn';
     return [
-      '#theme'       => 'helperbox_add_cta',
+      '#theme'       => 'helperbox_component_cta',
       '#cta_url'     => $url_string,
       '#cta_label'   => (string) $cta_label,
       '#cta_type'    => $cta_type,
       '#cta_target'  => $cta_target,
-      '#attributes'  => [],
+      '#attributes'  => new \Drupal\Core\Template\Attribute($attributes),
+      '#wrapper_attributes'  => new \Drupal\Core\Template\Attribute([]),
       '#url_type'    => $url_type,
       '#is_external' => $is_external,
       '#is_no_link'  => FALSE,
+      '#cta_info' => [],
+
     ];
   }
 

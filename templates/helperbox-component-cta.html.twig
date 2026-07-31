@@ -1,0 +1,57 @@
+{#
+/**
+ * @file
+ * Theme template for the CTA (Call-To-Action) button field.
+ *
+ * Available variables:
+ * - cta_url: The URL object or string for the link.
+ * - cta_label: The text to display on the CTA button.
+ * - cta_type: The button type (primary or secondary).
+ * - cta_target: The link target attribute (_self, _blank, _parent, _top).
+ * - attributes: Additional HTML attributes for the link element.
+ * - wrapper_attributes: Optional HTML attributes for the wrapper.
+ * - is_external: Boolean indicating if the link is external.
+ * - is_no_link: Boolean indicating if no link should be rendered (nolink/button).
+ *
+ * @see \Drupal\helperbox\Plugin\views\field\AddCTA::render()
+ */
+#}
+
+{%
+	set classes = []
+%}
+
+{% set link_attributes = attributes.addClass(classes) %}
+{% set has_wrapper = wrapper_attributes|render|trim %}
+
+{% if cta_url %}
+	{% set cta_html_tag = 'a' %}
+	{% set link_attributes = link_attributes.setAttribute('href', cta_url) %}
+{% else %}
+	{% set cta_html_tag = 'div' %}
+{% endif %}
+
+{% if cta_target %}
+	{% set link_attributes = link_attributes.setAttribute('target', cta_target) %}
+{% endif %}
+
+{% if is_external %}
+	{% set link_attributes = link_attributes.setAttribute('rel', 'noopener noreferrer') %}
+{% endif %}
+
+{% if has_wrapper %}
+	<div {{wrapper_attributes}}>
+	{% endif %}
+
+	{{ cta_info.contextual_links }}
+
+	<{{cta_html_tag}} {{ link_attributes }}>
+		<div class="cta">
+			<span class="cta__label">{{ cta_label }}</span>
+			<div class="cta__icon"></div>
+		</div>
+	</{{cta_html_tag}}>
+
+	{% if has_wrapper %}
+	</div>
+{% endif %}

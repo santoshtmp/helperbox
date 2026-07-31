@@ -48,36 +48,7 @@ function helperbox_theme() {
         ],
         'template' => 'helperbox-banner',
     ];
-    $theme['helperbox_content'] = [
-        'variables' => [
-            'section_title' => '',
-            'section_sub_title' => '',
-            'block_layout' => '',
-            'content' => [],
-            'show_edit_btn' => 0,
-            'node_view_label' => '',
-            'view_all_cta' => '',
-            'other_meta_info' => '',
-        ],
-        'template' => 'helperbox-content',
-    ];
-    $theme['helperbox_contact'] = [
-        'variables' => [
-            'block_layout' => '',
-            'section_title' => '',
-            'section_body' => '',
-            'email' => '',
-            'phone_number' => '',
-            'address' => '',
-            'social_links' => [],
-            'feature_media' => [],
-            'media_type' => '',
-            'selected_webform' => '',
-            'find_us_title' => '',
-            'contact_us_title' => '',
-        ],
-        'template' => 'helperbox-contact',
-    ];
+
     $theme['helperbox_repeatedcontent'] = [
         'variables' => [
             'block_layout' => '',
@@ -110,8 +81,8 @@ function helperbox_theme() {
         'template' => 'helperbox-renderblock',
     ];
 
-    // CTA button field template for Views.
-    $theme['helperbox_add_cta'] = [
+    // CTA button field template for Views. 
+    $theme['helperbox_component_cta'] = [
         'variables' => [
             'cta_url' => '',
             'cta_label' => '',
@@ -122,8 +93,18 @@ function helperbox_theme() {
             'is_external' => FALSE,
             'is_no_link' => FALSE,
             'wrapper_attributes' => [],
+            'cta_info' => [],
         ],
-        'template' => 'helperbox-add-cta',
+        'template' => 'helperbox-component-cta',
+    ];
+
+    // pdf viewer template. 
+    $theme['helperbox_component_pdfviewer'] = [
+        'variables' => [
+            'file_data' => [],
+            'attributes' => [],
+        ],
+        'template' => 'helperbox-component-pdfviewer',
     ];
 
     $theme['views_view_helperbox_slider_swiper'] = [
@@ -176,18 +157,6 @@ function helperbox_theme_suggestions_helperbox_banner(array $variables) {
 }
 
 /**
- * Implements template suggestion for helperbox_contact
- */
-function helperbox_theme_suggestions_helperbox_contact(array $variables) {
-
-    $suggestions = [];
-    if (isset($variables['block_layout'])) {
-        $suggestions[] = 'helperbox_contact__layout_' . $variables['block_layout'];
-    }
-    return $suggestions;
-}
-
-/**
  * Implements template suggestion for helperbox_repeatedcontent
  */
 function helperbox_theme_suggestions_helperbox_repeatedcontent(array $variables) {
@@ -195,19 +164,6 @@ function helperbox_theme_suggestions_helperbox_repeatedcontent(array $variables)
     $suggestions = [];
     if (isset($variables['block_layout'])) {
         $suggestions[] = 'helperbox_repeatedcontent__layout_' . $variables['block_layout'];
-    }
-
-    return $suggestions;
-}
-
-/**
- * Implements template suggestion for helperbox_content
- */
-function helperbox_theme_suggestions_helperbox_content(array $variables) {
-
-    $suggestions = [];
-    if (isset($variables['block_layout'])) {
-        $suggestions[] = 'helperbox_content__layout_' . $variables['block_layout'];
     }
 
     return $suggestions;

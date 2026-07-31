@@ -74,11 +74,19 @@ function helperbox_views_query_alter(ViewExecutable $view, QueryPluginBase $quer
  */
 function helperbox_views_data_alter(array &$data) {
     $group = t('HelperBox');
-    $data['views']['helperbox_count_node'] = [
+    $data['views']['helperbox_views_field_countnode'] = [
         'title' => t('Count node'),
         'help'  => t('Count content type node'),
         'field' => [
-            'id' => 'helperbox_count_node',
+            'id' => 'helperbox_views_field_countnode',
+        ],
+        'group' => $group,
+    ];
+    $data['views']['helperbox_views_field_customfunction'] = [
+        'title' => t('Custom function value'),
+        'help'  => t('show custom function value'),
+        'field' => [
+            'id' => 'helperbox_views_field_customfunction',
         ],
         'group' => $group,
     ];
@@ -101,19 +109,19 @@ function helperbox_views_data_alter(array &$data) {
         ],
         'group' => $group,
     ];
-    $data['views']['helperbox_add_media'] = [
+    $data['views']['helperbox_views_field_addmedia'] = [
         'title' => t('Add media'),
         'help'  => t('Add media'),
         'field' => [
-            'id' => 'helperbox_add_media',
+            'id' => 'helperbox_views_field_addmedia',
         ],
         'group' => $group,
     ];
-    $data['views']['helperbox_add_cta'] = [
+    $data['views']['helperbox_views_field_cta'] = [
         'title' => t('Add CTA'),
         'help'  => t('Add CTA (Call To Action) button'),
         'field' => [
-            'id' => 'helperbox_add_cta',
+            'id' => 'helperbox_views_field_cta',
         ],
         'group' => $group,
     ];

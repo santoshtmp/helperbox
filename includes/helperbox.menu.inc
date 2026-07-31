@@ -54,15 +54,17 @@ function helperbox_helperbox_menu_item_alter(&$menu_item, $link, $menu_region_lo
                 // Convert uri to Url object
                 $url = \Drupal\Core\Url::fromUri($uri);
 
+                $attributes = [];
+                $attributes['class'] = 'cta-wrapper link-btn';
                 $menu_item['field_cta'] = [
-                    '#theme'       => 'helperbox_add_cta',
+                    '#theme'       => 'helperbox_component_cta',
                     '#cta_url'     => $url->toString(),
                     '#cta_label'   => !empty($label) ? $label : $url->toString(),
                     '#cta_type'    => 'link',
                     '#cta_target'  => NULL,
                     '#is_external' => $url->isExternal(),
                     '#is_no_link'  => FALSE,
-                    '#attributes'  => [],
+                    '#attributes'  => new \Drupal\Core\Template\Attribute($attributes),
                 ];
             }
 
@@ -74,6 +76,17 @@ function helperbox_helperbox_menu_item_alter(&$menu_item, $link, $menu_region_lo
                 );
                 if (!empty($field_menu_locations) && is_array($field_menu_locations)) {
                     $menu_item['field_menu_location'] = $field_menu_locations;
+                }
+                // Check if current menu_region_location matches any of the stored values.
+                $is_default        = ($menu_region_location === 'default');
+                $is_location_match = in_array($menu_region_location, $field_menu_locations);
+
+                if ($is_default || $is_location_match) {
+                    // Store all location values in the menu item.
+                    $menu_item['field_menu_location'] = $field_menu_locations;
+                } else {
+                    // No match found — exclude this item from the menu.
+                    $menu_item = NULL;
                 }
             }
         }
@@ -96,118 +109,5 @@ function helperbox_helperbox_menu_other_variables_alter(&$other_variables, $conf
         // Implementation for altering other variables
     } catch (\Throwable $th) {
         //throw $th;
-    }
-}
-
-
-/**
- * Implements hook_form_alter().
- *
- * @param array $form
- *   The form array (passed by reference).
- * @param \Drupal\Core\Form\FormStateInterface $form_state
- *   The form state object.
- * @param string $form_id
- *   The ID of the form being altered.
- */
-function add_menu_location_at_menu_edit_form(&$form, \Drupal\Core\Form\FormStateInterface $form_state, $form_id) {
-
-    if ($form_id !== 'menu_edit_form') {
-        return;
-    }
-
-    if (!isset($form['links']['links'])) {
-        return;
-    }
-
-    // Insert "Menu Location" header as the second column.
-    if (isset($form['links']['links']['#header']) && is_array($form['links']['links']['#header'])) {
-        $header = $form['links']['links']['#header'];
-        array_splice($header, 1, 0, [t('Menu Location')]);
-        $form['links']['links']['#header'] = $header;
-    }
-
-    /**
-     * -------------------------
-     * Loop rows
-     * -------------------------
-     */
-    foreach ($form['links']['links'] as $key => &$row) {
-
-        // Skip table metadata.
-        if (!is_array($row) || !isset($row['#item'])) {
-            continue;
-        }
-
-        $menu_location = '';
-
-        try {
-            $link = $row['#item']->link;
-            $menu_item_type = $link->getProvider() ?: '';
-
-            if ($menu_item_type === 'menu_link_content') {
-                $entity = \Drupal::service('menu_item_extras.menu_link_tree_handler')
-                    ->getMenuLinkItemEntity($link);
-
-                if (
-                    $entity &&
-                    $entity->hasField('field_menu_location') &&
-                    !$entity->get('field_menu_location')->isEmpty()
-                ) {
-                    $field = $entity->get('field_menu_location');
-
-                    // $field_menu_locations = array_column(
-                    //     $field->getValue(),
-                    //     'value'
-                    // );
-
-                    // if (!empty($field_menu_locations) && is_array($field_menu_locations)) {
-                    //     $menu_location = '<ul><li>' .
-                    //         implode('</li><li>', array_map('htmlspecialchars', $field_menu_locations)) .
-                    //         '</li></ul>';
-                    // }
-
-                    // Get allowed values (value => label)
-                    $allowed_values = $field->getFieldDefinition()
-                        ->getSetting('allowed_values');
-                    $stored_values = $field->getValue();
-                    $labels = [];
-
-                    foreach ($stored_values as $item) {
-                        $value = $item['value'] ?? NULL;
-
-                        if ($value !== NULL && isset($allowed_values[$value])) {
-                            $labels[] = $allowed_values[$value];
-                        }
-                    }
-
-                    if (!empty($labels)) {
-                        $menu_location = '<ul><li>' .
-                            implode('</li><li>', array_map('htmlspecialchars', $labels)) .
-                            '</li></ul>';
-                    }
-                }
-            }
-        } catch (\Exception $e) {
-            $menu_location = '';
-        }
-
-        $location_column = [
-            '#type' => 'item',
-            '#markup' => $menu_location,
-        ];
-
-        // Rebuild row and insert Menu Location after title column.
-        $new_row = [];
-
-        foreach ($row as $name => $element) {
-            $new_row[$name] = $element;
-
-            if ($name === 'title') {
-                $new_row['menu_location'] = $location_column;
-            }
-        }
-
-        $row = $new_row;
     }
 }

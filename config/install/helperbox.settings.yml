@@ -1,11 +1,12 @@
 enable_helperbox: true
 enable_media_custom_thumbnail: true
 enable_unique_node_per_bundle: false
+unique_node_content_type: []
 enable_only_alies_login_url: false
 cdn:
   cdn_select2: false
   cdn_lightgallery: false
-field_all_rules: {  }
-field_rules_node: {  }
-field_rules_form: {  }
-field_rules_max_content: {  }
+field_all_rules: {}
+field_rules_node: {}
+field_rules_form: {}
+field_rules_max_content: {}

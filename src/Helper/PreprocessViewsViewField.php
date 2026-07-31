@@ -29,27 +29,6 @@ class PreprocessViewsViewField {
         $view_id = $view->id();
         $current_display =  $view->current_display;
         // 
-        if ($view_id === 'understanding_fimi' && $current_display == 'block_1') {
-            $node = $row->_entity;
-            if ($node->id() == 16 && $field->field == 'field_content_section') {
-                // $display = EntityViewDisplay::load('node.' . $node->bundle() . '.default');
-                $variables['featured_image'] = "";
-                if ($node->hasField('field_content_section') && !$node->get('field_content_section')->isEmpty()) {
-                    $get_field_content_section = $node->get('field_content_section');
-                    foreach ($get_field_content_section as $key => $content_section) {
-                        $paragraph = $content_section->entity;
-                        $paragraphdisplay = EntityViewDisplay::load('paragraph.' . $paragraph->bundle() . '.default');
-                        if ($paragraph->hasField('field_featured_image') && !$paragraph->get('field_featured_image')->isEmpty()) {
-                            $field_featured_image_id = $paragraph->get('field_featured_image')->entity->id();
-                            $component_image_style = MediaHelper::get_component_image_style($paragraphdisplay, 'field_featured_image', true);
-                            $image_style = $component_image_style['image_style'] ?? '';
-                            $image_loading = $component_image_style['image_loading']['attribute'] ?? 'lazy';
-                            $variables['featured_image'] = MediaHelper::get_media_library_info($field_featured_image_id, $image_style, $image_loading);
-                        }
-                    }
-                }
-            }
-        }
     }
 
     /**

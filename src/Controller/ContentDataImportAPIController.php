@@ -382,8 +382,19 @@ class ContentDataImportAPIController extends ControllerBase {
                         continue;
                     }
 
-                    // Load an existing node by UUID, or create a new one.
-                    $existing = $storage->loadByProperties(['uuid' => $nodeData['uuid']]);
+                    // Load an existing node by UUID.
+                    $existing = $storage->loadByProperties([
+                        'uuid' => $nodeData['uuid'],
+                    ]);
+
+                    // If not found by UUID, try by content type and title.
+                    if (empty($existing)) {
+                        $existing = $storage->loadByProperties([
+                            'type' => $local_node_type,
+                            'title' => $nodeData['title'],
+                        ]);
+                    }
+
                     if ($existing) {
                         /** @var \Drupal\node\Entity\Node $node */
                         $node = reset($existing);
@@ -408,8 +419,10 @@ class ContentDataImportAPIController extends ControllerBase {
                     if ($nodeData['changed'] && !empty($nodeData['changed'])) {
                         $node->setChangedTime((int) $nodeData['changed']);
                     }
-                    if ($nodeData['language'] && !empty($nodeData['language']) && $node->hasField('langcode')) {
-                        $node->set('langcode', (string) $nodeData['language']);
+                    $language = $nodeData['language'] ?? 'en';
+                    $language = ($language === 'und') ? 'en' : $language;
+                    if ($node->hasField('langcode')) {
+                        $node->set('langcode', $language);
                     }
 
                     // --- Mapped custom fields ---
@@ -559,6 +572,9 @@ class ContentDataImportAPIController extends ControllerBase {
                             case 'text_with_summary':
                                 $values = [];
                                 foreach ($fieldValue as $item) {
+                                    if (empty($item['value'])) {
+                                        continue;
+                                    }
                                     $media = self::extractDescriptionMedia($item['value'], $baseurl);
                                     $item['value'] = $media['html'] ?? $item['value'];
                                     $media_list = $media['media'] ?? [];
